@@ -76,8 +76,10 @@ fun PrayerCard(
     val icon: ImageVector = when (prayer) {
         PrayerType.FAJR -> Icons.Default.WbTwilight
         PrayerType.SUNRISE -> Icons.Default.Brightness5
+        PrayerType.ISRAQ -> Icons.Default.Brightness5
         PrayerType.DHUHR -> Icons.Default.Brightness7
         PrayerType.ASR -> Icons.Default.Brightness6
+        PrayerType.GURUB_E_AFTAB -> Icons.Default.WbTwilight
         PrayerType.MAGHRIB -> Icons.Default.WbTwilight
         PrayerType.ISHA -> Icons.Default.Brightness2
     }
@@ -183,13 +185,27 @@ fun PrayerCard(
                         }
                     }
 
-                    Text(
-                        text = prayer.arabicName,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        color = if (isCurrent) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = prayer.arabicName,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                            color = if (isCurrent) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                        )
+
+                        prayer.subtitle?.let { sub ->
+                            Text(
+                                text = "• $sub",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (isCurrent) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                                else MaterialTheme.colorScheme.outline
+                            )
+                        }
+                    }
                 }
             }
 

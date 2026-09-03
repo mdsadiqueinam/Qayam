@@ -483,7 +483,7 @@ fun SettingsScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
 
-                        PrayerType.obligatories.forEach { prayer ->
+                        PrayerType.dailyPrayers.forEach { prayer ->
                             val offset = settings.minuteOffsets[prayer] ?: 0
                             Row(
                                 modifier = Modifier

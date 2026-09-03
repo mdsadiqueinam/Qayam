@@ -31,24 +31,30 @@ data class UserSettings(
     val prayerAlertSounds: Map<PrayerType, AdhanSoundType> = mapOf(
         PrayerType.FAJR to AdhanSoundType.MAKKAH,
         PrayerType.SUNRISE to AdhanSoundType.SILENT,
+        PrayerType.ISRAQ to AdhanSoundType.GENTLE_CHIME,
         PrayerType.DHUHR to AdhanSoundType.MAKKAH,
         PrayerType.ASR to AdhanSoundType.MADINAH,
+        PrayerType.GURUB_E_AFTAB to AdhanSoundType.SILENT,
         PrayerType.MAGHRIB to AdhanSoundType.AL_AQSA,
         PrayerType.ISHA to AdhanSoundType.MAKKAH
     ),
     val prayerAlertEnabled: Map<PrayerType, Boolean> = mapOf(
         PrayerType.FAJR to true,
         PrayerType.SUNRISE to false,
+        PrayerType.ISRAQ to true,
         PrayerType.DHUHR to true,
         PrayerType.ASR to true,
+        PrayerType.GURUB_E_AFTAB to false,
         PrayerType.MAGHRIB to true,
         PrayerType.ISHA to true
     ),
     val minuteOffsets: Map<PrayerType, Int> = mapOf(
         PrayerType.FAJR to 0,
         PrayerType.SUNRISE to 0,
+        PrayerType.ISRAQ to 0,
         PrayerType.DHUHR to 0,
         PrayerType.ASR to 0,
+        PrayerType.GURUB_E_AFTAB to 0,
         PrayerType.MAGHRIB to 0,
         PrayerType.ISHA to 0
     )
@@ -77,7 +83,8 @@ class AppSettings(context: Context) {
 
         val alertSounds = PrayerType.dailyPrayers.associateWith { prayer ->
             val defaultSound = when (prayer) {
-                PrayerType.SUNRISE -> AdhanSoundType.SILENT
+                PrayerType.SUNRISE, PrayerType.GURUB_E_AFTAB -> AdhanSoundType.SILENT
+                PrayerType.ISRAQ -> AdhanSoundType.GENTLE_CHIME
                 PrayerType.ASR -> AdhanSoundType.MADINAH
                 PrayerType.MAGHRIB -> AdhanSoundType.AL_AQSA
                 else -> AdhanSoundType.MAKKAH
@@ -87,7 +94,7 @@ class AppSettings(context: Context) {
         }
 
         val alertEnabled = PrayerType.dailyPrayers.associateWith { prayer ->
-            val def = prayer != PrayerType.SUNRISE
+            val def = prayer != PrayerType.SUNRISE && prayer != PrayerType.GURUB_E_AFTAB
             prefs.getBoolean("enabled_${prayer.id}", def)
         }
 

@@ -46,20 +46,33 @@ class ExampleRobolectricTest {
         assertNotNull(schedule)
         assertNotNull(schedule.fajr)
         assertNotNull(schedule.sunrise)
+        assertNotNull(schedule.israq)
         assertNotNull(schedule.dhuhr)
         assertNotNull(schedule.asr)
+        assertNotNull(schedule.gurubAftab)
         assertNotNull(schedule.maghrib)
         assertNotNull(schedule.isha)
 
-        // Sunrise should be after Fajr
+        // Sunrise (Tulub e Aftab) should be after Fajr
         assertTrue(schedule.sunrise.timeInMillis > schedule.fajr.timeInMillis)
-        // Dhuhr should be after Sunrise
-        assertTrue(schedule.dhuhr.timeInMillis > schedule.sunrise.timeInMillis)
+        // Israq starts exactly 20 minutes after Sunrise
+        assertEquals(schedule.sunrise.timeInMillis + 20 * 60 * 1000L, schedule.israq.timeInMillis)
+        // Dhuhr should be after Israq
+        assertTrue(schedule.dhuhr.timeInMillis > schedule.israq.timeInMillis)
         // Asr should be after Dhuhr
         assertTrue(schedule.asr.timeInMillis > schedule.dhuhr.timeInMillis)
-        // Maghrib should be after Asr
-        assertTrue(schedule.maghrib.timeInMillis > schedule.asr.timeInMillis)
+        // Gurub e Aftab (Sunset) should be after Asr
+        assertTrue(schedule.gurubAftab.timeInMillis > schedule.asr.timeInMillis)
+        // Maghrib should be at or right after Gurub e Aftab
+        assertTrue(schedule.maghrib.timeInMillis >= schedule.gurubAftab.timeInMillis)
         // Isha should be after Maghrib
         assertTrue(schedule.isha.timeInMillis > schedule.maghrib.timeInMillis)
+
+        // Check Islamic naming
+        assertEquals("Shurūq Ash-Shams", PrayerType.SUNRISE.displayName)
+        assertEquals("شُرُوق الشَّمْس", PrayerType.SUNRISE.arabicName)
+        assertEquals("Israq", PrayerType.ISRAQ.displayName)
+        assertEquals("Ghurūb Ash-Shams", PrayerType.GURUB_E_AFTAB.displayName)
+        assertEquals("غُروب الشَّمْس", PrayerType.GURUB_E_AFTAB.arabicName)
     }
 }

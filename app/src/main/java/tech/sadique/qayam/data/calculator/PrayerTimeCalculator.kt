@@ -119,12 +119,15 @@ object PrayerTimeCalculator {
         val asrHourAngle = hourAngle(asrAngle, latitude, sun.declination)
         val asrTransit = fixHour(dhuhrTransit + asrHourAngle / 15.0)
 
-        // Maghrib
+        // Gurub e Aftab (Sunset)
+        val gurubTransit = sunsetTransit
+
+        // Maghrib (Sunset + 3 min safety margin for complete sunset, or method angle e.g. Tehran)
         var maghribTransit = if (method.maghribAngle != null) {
             val maghribHourAngle = hourAngle(-method.maghribAngle, latitude, sun.declination)
             fixHour(dhuhrTransit + maghribHourAngle / 15.0)
         } else {
-            sunsetTransit
+            fixHour(sunsetTransit + 3.0 / 60.0)
         }
 
         // Isha
@@ -183,12 +186,20 @@ object PrayerTimeCalculator {
             return cal
         }
 
+        val sunriseCal = toCalendar(sunriseTransit, minuteOffsets[PrayerType.SUNRISE] ?: 0)
+        // Israq starts 20 minutes after sunrise
+        val israqCal = (sunriseCal.clone() as Calendar).apply {
+            add(Calendar.MINUTE, 20 + (minuteOffsets[PrayerType.ISRAQ] ?: 0))
+        }
+
         return PrayerSchedule(
             date = date.clone() as Calendar,
             fajr = toCalendar(fajrTransit, minuteOffsets[PrayerType.FAJR] ?: 0),
-            sunrise = toCalendar(sunriseTransit, minuteOffsets[PrayerType.SUNRISE] ?: 0),
+            sunrise = sunriseCal,
+            israq = israqCal,
             dhuhr = toCalendar(dhuhrFinal, minuteOffsets[PrayerType.DHUHR] ?: 0),
             asr = toCalendar(asrTransit, minuteOffsets[PrayerType.ASR] ?: 0),
+            gurubAftab = toCalendar(gurubTransit, minuteOffsets[PrayerType.GURUB_E_AFTAB] ?: 0),
             maghrib = toCalendar(maghribTransit, minuteOffsets[PrayerType.MAGHRIB] ?: 0),
             isha = toCalendar(ishaTransit, minuteOffsets[PrayerType.ISHA] ?: 0),
             midnight = toCalendar(midnightTransit, 0)
@@ -227,8 +238,10 @@ object PrayerTimeCalculator {
 
         val fajrTime = schedule.fajr.timeInMillis
         val sunriseTime = schedule.sunrise.timeInMillis
+        val israqTime = schedule.israq.timeInMillis
         val dhuhrTime = schedule.dhuhr.timeInMillis
         val asrTime = schedule.asr.timeInMillis
+        val gurubTime = schedule.gurubAftab.timeInMillis
         val maghribTime = schedule.maghrib.timeInMillis
         val ishaTime = schedule.isha.timeInMillis
 
@@ -253,11 +266,18 @@ object PrayerTimeCalculator {
                 windowStart = fajrTime
                 windowEnd = sunriseTime
             }
-            nowMillis < dhuhrTime -> {
+            nowMillis < israqTime -> {
                 currentPrayer = PrayerType.SUNRISE
+                nextPrayer = PrayerType.ISRAQ
+                nextPrayerTime = schedule.israq
+                windowStart = sunriseTime
+                windowEnd = israqTime
+            }
+            nowMillis < dhuhrTime -> {
+                currentPrayer = PrayerType.ISRAQ
                 nextPrayer = PrayerType.DHUHR
                 nextPrayerTime = schedule.dhuhr
-                windowStart = sunriseTime
+                windowStart = israqTime
                 windowEnd = dhuhrTime
             }
             nowMillis < asrTime -> {
@@ -267,11 +287,18 @@ object PrayerTimeCalculator {
                 windowStart = dhuhrTime
                 windowEnd = asrTime
             }
-            nowMillis < maghribTime -> {
+            nowMillis < gurubTime -> {
                 currentPrayer = PrayerType.ASR
+                nextPrayer = PrayerType.GURUB_E_AFTAB
+                nextPrayerTime = schedule.gurubAftab
+                windowStart = asrTime
+                windowEnd = gurubTime
+            }
+            nowMillis < maghribTime -> {
+                currentPrayer = PrayerType.GURUB_E_AFTAB
                 nextPrayer = PrayerType.MAGHRIB
                 nextPrayerTime = schedule.maghrib
-                windowStart = asrTime
+                windowStart = gurubTime
                 windowEnd = maghribTime
             }
             nowMillis < ishaTime -> {
@@ -297,14 +324,14 @@ object PrayerTimeCalculator {
         val totalDuration = max(1L, windowEnd - windowStart)
         val progress = ((nowMillis - windowStart).toFloat() / totalDuration.toFloat()).coerceIn(0f, 1f)
 
-        // Sun day progress: 0.0 at sunrise, 0.5 at dhuhr, 1.0 at sunset
-        val isDaytime = nowMillis in sunriseTime..maghribTime
-        val dayDuration = max(1L, maghribTime - sunriseTime)
+        // Sun day progress: 0.0 at sunrise (Tulub e Aftab), 1.0 at sunset (Gurub e Aftab)
+        val isDaytime = nowMillis in sunriseTime..gurubTime
+        val dayDuration = max(1L, gurubTime - sunriseTime)
         val sunProgressPercent = if (isDaytime) {
             ((nowMillis - sunriseTime).toFloat() / dayDuration.toFloat()).coerceIn(0f, 1f)
         } else {
             // Night arc: 0.0 at sunset, 1.0 at next sunrise
-            val nightStart = if (nowMillis < sunriseTime) maghribTime - 24 * 3600 * 1000L else maghribTime
+            val nightStart = if (nowMillis < sunriseTime) gurubTime - 24 * 3600 * 1000L else gurubTime
             val nightEnd = if (nowMillis < sunriseTime) sunriseTime else sunriseTime + 24 * 3600 * 1000L
             val nightTotal = max(1L, nightEnd - nightStart)
             ((nowMillis - nightStart).toFloat() / nightTotal.toFloat()).coerceIn(0f, 1f)

@@ -84,8 +84,10 @@ fun MasjidHorizonCanvas(
     val skyGradientColors = when (currentPrayer) {
         PrayerType.FAJR -> listOf(SkyFajrStart, SkyFajrMid, SkyFajrEnd)
         PrayerType.SUNRISE -> listOf(SkySunriseStart, SkySunriseMid, SkySunriseEnd)
+        PrayerType.ISRAQ -> listOf(SkySunriseMid, SkyDhuhrStart, SkyDhuhrMid)
         PrayerType.DHUHR -> listOf(SkyDhuhrStart, SkyDhuhrMid, SkyDhuhrEnd)
         PrayerType.ASR -> listOf(SkyAsrStart, SkyAsrMid, SkyAsrEnd)
+        PrayerType.GURUB_E_AFTAB -> listOf(SkyMaghribStart, SkyMaghribMid, SkyMaghribEnd)
         PrayerType.MAGHRIB -> listOf(SkyMaghribStart, SkyMaghribMid, SkyMaghribEnd)
         PrayerType.ISHA -> listOf(SkyIshaStart, SkyIshaMid, SkyIshaEnd)
     }
@@ -184,8 +186,8 @@ private fun DrawScope.drawStars(width: Float, maxHeight: Float, twinkle: Float) 
 
 private fun DrawScope.drawSun(center: Offset, pulse: Float, prayerType: PrayerType) {
     val sunColor = when (prayerType) {
-        PrayerType.SUNRISE, PrayerType.MAGHRIB -> Color(0xFFFF7A00)
-        PrayerType.ASR -> Color(0xFFFFB300)
+        PrayerType.SUNRISE, PrayerType.GURUB_E_AFTAB, PrayerType.MAGHRIB -> Color(0xFFFF7A00)
+        PrayerType.ISRAQ, PrayerType.ASR -> Color(0xFFFFB300)
         else -> Color(0xFFFFD54F)
     }
 
@@ -266,8 +268,10 @@ private fun DrawScope.drawHorizonAndMosque(
     val silhouetteColor = if (isDaytime) {
         when (prayerType) {
             PrayerType.SUNRISE -> Color(0xFF2C1608)
+            PrayerType.ISRAQ -> Color(0xFF1B2E1B)
             PrayerType.DHUHR -> Color(0xFF042B22)
             PrayerType.ASR -> Color(0xFF1E1704)
+            PrayerType.GURUB_E_AFTAB -> Color(0xFF2A1010)
             PrayerType.MAGHRIB -> Color(0xFF150A1C)
             else -> Color(0xFF071F1A)
         }

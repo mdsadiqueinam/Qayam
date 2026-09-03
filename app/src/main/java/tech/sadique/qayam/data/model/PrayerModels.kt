@@ -6,12 +6,15 @@ enum class PrayerType(
     val id: String,
     val displayName: String,
     val arabicName: String,
-    val isMainPrayer: Boolean = true
+    val isMainPrayer: Boolean = true,
+    val subtitle: String? = null
 ) {
     FAJR("fajr", "Fajr", "الفجر", true),
-    SUNRISE("sunrise", "Sunrise", "الشروق", false),
+    SUNRISE("sunrise", "Shurūq Ash-Shams", "شُرُوق الشَّمْس", false, "Sunrise"),
+    ISRAQ("israq", "Israq", "الإشراق", false, "+20m after sunrise"),
     DHUHR("dhuhr", "Dhuhr", "الظهر", true),
     ASR("asr", "Asr", "العصر", true),
+    GURUB_E_AFTAB("sunset", "Ghurūb Ash-Shams", "غُروب الشَّمْس", false, "Sunset"),
     MAGHRIB("maghrib", "Maghrib", "المغرب", true),
     ISHA("isha", "Isha", "العشاء", true);
 
@@ -21,7 +24,7 @@ enum class PrayerType(
         }
 
         val dailyPrayers: List<PrayerType>
-            get() = listOf(FAJR, SUNRISE, DHUHR, ASR, MAGHRIB, ISHA)
+            get() = listOf(FAJR, SUNRISE, ISRAQ, DHUHR, ASR, GURUB_E_AFTAB, MAGHRIB, ISHA)
 
         val obligatories: List<PrayerType>
             get() = listOf(FAJR, DHUHR, ASR, MAGHRIB, ISHA)
@@ -177,8 +180,10 @@ data class PrayerSchedule(
     val date: Calendar,
     val fajr: Calendar,
     val sunrise: Calendar,
+    val israq: Calendar,
     val dhuhr: Calendar,
     val asr: Calendar,
+    val gurubAftab: Calendar,
     val maghrib: Calendar,
     val isha: Calendar,
     val midnight: Calendar
@@ -187,8 +192,10 @@ data class PrayerSchedule(
         return when (type) {
             PrayerType.FAJR -> fajr
             PrayerType.SUNRISE -> sunrise
+            PrayerType.ISRAQ -> israq
             PrayerType.DHUHR -> dhuhr
             PrayerType.ASR -> asr
+            PrayerType.GURUB_E_AFTAB -> gurubAftab
             PrayerType.MAGHRIB -> maghrib
             PrayerType.ISHA -> isha
         }
@@ -198,8 +205,10 @@ data class PrayerSchedule(
         return listOf(
             PrayerType.FAJR to fajr,
             PrayerType.SUNRISE to sunrise,
+            PrayerType.ISRAQ to israq,
             PrayerType.DHUHR to dhuhr,
             PrayerType.ASR to asr,
+            PrayerType.GURUB_E_AFTAB to gurubAftab,
             PrayerType.MAGHRIB to maghrib,
             PrayerType.ISHA to isha
         )

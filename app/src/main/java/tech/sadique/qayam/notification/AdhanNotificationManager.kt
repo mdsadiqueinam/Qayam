@@ -66,8 +66,16 @@ class AdhanNotificationManager(private val context: Context) {
         val timeFormatter = SimpleDateFormat("h:mm a", Locale.getDefault())
         val currentTimeStr = timeFormatter.format(Calendar.getInstance().time)
 
-        val title = "Hayya 'alas-Salah: ${prayerType.displayName} Time"
-        val body = "It is now time for ${prayerType.displayName} (${prayerType.arabicName}) prayer • $currentTimeStr"
+        val title = if (prayerType.isMainPrayer) {
+            "Hayya 'alas-Salah: ${prayerType.displayName} Time"
+        } else {
+            "${prayerType.displayName} Time"
+        }
+        val body = if (prayerType.isMainPrayer) {
+            "It is now time for ${prayerType.displayName} (${prayerType.arabicName}) prayer • $currentTimeStr"
+        } else {
+            "It is now time for ${prayerType.displayName} (${prayerType.arabicName}) • $currentTimeStr"
+        }
 
         val builder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
