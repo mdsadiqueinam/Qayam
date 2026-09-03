@@ -1,5 +1,5 @@
 {
-  "name": "Salah Times",
+  "name": "Qayam",
   "description": "Offline prayer times with GPS location, animated sun horizon tracker, customizable adhan notifications, and prayer calculation settings.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

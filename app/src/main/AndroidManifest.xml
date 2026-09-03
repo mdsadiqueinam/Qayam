@@ -40,7 +40,7 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.TIME_SET" />
                 <action android:name="android.intent.action.TIMEZONE_CHANGED" />
-                <action android:name="com.example.ACTION_ADHAN_ALARM" />
+                <action android:name="tech.sadique.qayam.ACTION_ADHAN_ALARM" />
             </intent-filter>
         </receiver>
     </application>
