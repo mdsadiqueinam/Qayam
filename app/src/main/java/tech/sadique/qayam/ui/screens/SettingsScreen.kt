@@ -63,18 +63,24 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import java.util.Locale
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
 import tech.sadique.qayam.data.location.LocationService
 import tech.sadique.qayam.data.model.AdhanSoundType
 import tech.sadique.qayam.data.model.AppThemeMode
@@ -459,9 +465,22 @@ fun SettingsScreen(
             // 5. Background Reliability & Exact Alarms
             item {
                 val context = LocalContext.current
+                val lifecycleOwner = LocalLifecycleOwner.current
                 var testAlarmScheduled by remember { mutableStateOf(false) }
-                val canExactAlarms = remember { viewModel.canScheduleExactAlarms() }
-                val isBatteryIgnored = remember { viewModel.isIgnoringBatteryOptimizations() }
+                var canExactAlarms by remember { mutableStateOf(viewModel.canScheduleExactAlarms()) }
+                var isBatteryIgnored by remember { mutableStateOf(viewModel.isIgnoringBatteryOptimizations()) }
+
+                // Refresh permission status when returning from system Settings.
+                DisposableEffect(lifecycleOwner) {
+                    val observer = LifecycleEventObserver { _, event ->
+                        if (event == Lifecycle.Event.ON_RESUME) {
+                            canExactAlarms = viewModel.canScheduleExactAlarms()
+                            isBatteryIgnored = viewModel.isIgnoringBatteryOptimizations()
+                        }
+                    }
+                    lifecycleOwner.lifecycle.addObserver(observer)
+                    onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+                }
 
                 SettingsSectionCard(
                     title = "Background Reliability",
@@ -510,7 +529,7 @@ fun SettingsScreen(
                                     OutlinedButton(
                                         onClick = {
                                             val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
-                                                data = Uri.parse("package:${context.packageName}")
+                                                data = "package:${context.packageName}".toUri()
                                             }
                                             context.startActivity(intent)
                                         },
@@ -554,18 +573,13 @@ fun SettingsScreen(
                                     )
                                 }
 
-                                if (!isBatteryIgnored && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                                if (!isBatteryIgnored) {
                                     OutlinedButton(
                                         onClick = {
-                                            try {
-                                                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                                                    data = Uri.parse("package:${context.packageName}")
-                                                }
-                                                context.startActivity(intent)
-                                            } catch (e: Exception) {
-                                                val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
-                                                context.startActivity(intent)
-                                            }
+                                            // No REQUEST_IGNORE_BATTERY_OPTIMIZATIONS permission:
+                                            // open the system list so the user can exempt the app manually.
+                                            val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                                            context.startActivity(intent)
                                         },
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
@@ -636,7 +650,7 @@ fun SettingsScreen(
                                     fontWeight = FontWeight.SemiBold
                                 )
                                 Text(
-                                    text = "${settings.currentLocation.cityName} (${String.format("%.2f", settings.currentLocation.latitude)}°, ${String.format("%.2f", settings.currentLocation.longitude)}°)",
+                                    text = "${settings.currentLocation.cityName} (${String.format(Locale.US, "%.2f", settings.currentLocation.latitude)}°, ${String.format(Locale.US, "%.2f", settings.currentLocation.longitude)}°)",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.primary
                                 )

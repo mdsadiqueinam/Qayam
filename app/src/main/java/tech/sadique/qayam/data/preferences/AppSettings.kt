@@ -2,6 +2,7 @@ package tech.sadique.qayam.data.preferences
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
 import tech.sadique.qayam.data.model.AdhanSoundType
 import tech.sadique.qayam.data.model.AppThemeMode
 import tech.sadique.qayam.data.model.CalculationMethod
@@ -76,8 +77,10 @@ class AppSettings(context: Context) {
         val isGps = prefs.getBoolean("is_gps_auto", true)
         val is24H = prefs.getBoolean("is_24h", false)
 
-        val lat = prefs.getFloat("loc_lat", 21.4225f).toDouble()
-        val lng = prefs.getFloat("loc_lng", 39.8262f).toDouble()
+        val lat = prefs.getString("loc_lat_d", null)?.toDoubleOrNull()
+            ?: prefs.getFloat("loc_lat", 21.4225f).toDouble()
+        val lng = prefs.getString("loc_lng_d", null)?.toDoubleOrNull()
+            ?: prefs.getFloat("loc_lng", 39.8262f).toDouble()
         val city = prefs.getString("loc_city", "Makkah") ?: "Makkah"
         val country = prefs.getString("loc_country", "Saudi Arabia") ?: "Saudi Arabia"
 
@@ -124,64 +127,66 @@ class AppSettings(context: Context) {
     }
 
     fun updateCalculationMethod(method: CalculationMethod) {
-        prefs.edit().putString("calc_method", method.id).apply()
+        prefs.edit { putString("calc_method", method.id) }
         _settings.value = _settings.value.copy(calculationMethod = method)
     }
 
     fun updateJuristicMethod(juristic: JuristicMethod) {
-        prefs.edit().putString("juristic_method", juristic.id).apply()
+        prefs.edit { putString("juristic_method", juristic.id) }
         _settings.value = _settings.value.copy(juristicMethod = juristic)
     }
 
     fun updateHighLatitudeRule(rule: HighLatitudeRule) {
-        prefs.edit().putString("high_lat_rule", rule.id).apply()
+        prefs.edit { putString("high_lat_rule", rule.id) }
         _settings.value = _settings.value.copy(highLatitudeRule = rule)
     }
 
     fun updateThemeMode(mode: AppThemeMode) {
-        prefs.edit().putString("theme_mode", mode.id).apply()
+        prefs.edit { putString("theme_mode", mode.id) }
         _settings.value = _settings.value.copy(themeMode = mode)
     }
 
     fun updateHighPrioritySound(enabled: Boolean) {
-        prefs.edit().putBoolean("high_priority_sound", enabled).apply()
+        prefs.edit { putBoolean("high_priority_sound", enabled) }
         _settings.value = _settings.value.copy(highPrioritySound = enabled)
     }
 
     fun updateIs24HourFormat(is24H: Boolean) {
-        prefs.edit().putBoolean("is_24h", is24H).apply()
+        prefs.edit { putBoolean("is_24h", is24H) }
         _settings.value = _settings.value.copy(is24HourFormat = is24H)
     }
 
     fun updatePrayerAlertSound(prayer: PrayerType, sound: AdhanSoundType) {
-        prefs.edit().putString("sound_${prayer.id}", sound.id).apply()
+        prefs.edit { putString("sound_${prayer.id}", sound.id) }
         val newMap = _settings.value.prayerAlertSounds.toMutableMap()
         newMap[prayer] = sound
         _settings.value = _settings.value.copy(prayerAlertSounds = newMap)
     }
 
     fun updatePrayerAlertEnabled(prayer: PrayerType, enabled: Boolean) {
-        prefs.edit().putBoolean("enabled_${prayer.id}", enabled).apply()
+        prefs.edit { putBoolean("enabled_${prayer.id}", enabled) }
         val newMap = _settings.value.prayerAlertEnabled.toMutableMap()
         newMap[prayer] = enabled
         _settings.value = _settings.value.copy(prayerAlertEnabled = newMap)
     }
 
     fun updatePrayerMinuteOffset(prayer: PrayerType, offset: Int) {
-        prefs.edit().putInt("offset_${prayer.id}", offset).apply()
+        prefs.edit { putInt("offset_${prayer.id}", offset) }
         val newMap = _settings.value.minuteOffsets.toMutableMap()
         newMap[prayer] = offset
         _settings.value = _settings.value.copy(minuteOffsets = newMap)
     }
 
     fun updateLocation(location: LocationInfo) {
-        prefs.edit()
-            .putFloat("loc_lat", location.latitude.toFloat())
-            .putFloat("loc_lng", location.longitude.toFloat())
-            .putString("loc_city", location.cityName)
-            .putString("loc_country", location.countryName)
-            .putBoolean("is_gps_auto", location.isGpsBased)
-            .apply()
+        prefs.edit {
+            putString("loc_lat_d", location.latitude.toString())
+            putString("loc_lng_d", location.longitude.toString())
+            remove("loc_lat")
+            remove("loc_lng")
+            putString("loc_city", location.cityName)
+            putString("loc_country", location.countryName)
+            putBoolean("is_gps_auto", location.isGpsBased)
+        }
         _settings.value = _settings.value.copy(
             currentLocation = location,
             isGpsAuto = location.isGpsBased

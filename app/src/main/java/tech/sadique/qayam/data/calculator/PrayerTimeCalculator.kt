@@ -16,6 +16,7 @@ import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.tan
 
@@ -111,11 +112,9 @@ object PrayerTimeCalculator {
         val fajrHourAngle = hourAngle(-method.fajrAngle, latitude, sun.declination)
         var fajrTransit = fixHour(dhuhrTransit - fajrHourAngle / 15.0)
 
-        // Asr
+        // Asr altitude above horizon: arccot(shadow + tan(|lat - dec|))
         val shadowFactor = juristic.shadowFactor
-        val asrAltitude = dAcos(1.0 / (shadowFactor + dTan(abs(latitude - sun.declination))))
-        // Asr angle above horizon: arccot(t + tan(|lat-dec|)) = 90 - atan(t + tan)
-        val asrAngle = 90.0 - (atan2(1.0, shadowFactor + dTan(abs(latitude - sun.declination))) * DEG)
+        val asrAngle = dAtan2(1.0, shadowFactor + dTan(abs(latitude - sun.declination)))
         val asrHourAngle = hourAngle(asrAngle, latitude, sun.declination)
         val asrTransit = fixHour(dhuhrTransit + asrHourAngle / 15.0)
 
@@ -160,22 +159,32 @@ object PrayerTimeCalculator {
                 fajrTransit = fixHour(sunriseTransit - maxFajrDiff)
             }
 
-            val maxIshaDiff = nightDuration * portionIsha
-            val actualIshaDiff = fixHour(ishaTransit - sunsetTransit)
-            if (actualIshaDiff > maxIshaDiff || actualIshaDiff.isNaN()) {
-                ishaTransit = fixHour(sunsetTransit + maxIshaDiff)
+            // Skip Isha clamp for interval-based methods (e.g. Umm al-Qura Isha +90m),
+            // which intentionally exceed the angle-based portion of the night.
+            if (method.ishaMinutesAfterMaghrib == null) {
+                val maxIshaDiff = nightDuration * portionIsha
+                val actualIshaDiff = fixHour(ishaTransit - sunsetTransit)
+                if (actualIshaDiff > maxIshaDiff || actualIshaDiff.isNaN()) {
+                    ishaTransit = fixHour(sunsetTransit + maxIshaDiff)
+                }
             }
         }
 
-        // Slight standard safety buffer for Dhuhr (1 min after transit)
+        // Slight standard safety buffer for Dhuhr (2 min after transit)
         val dhuhrFinal = fixHour(dhuhrTransit + 2.0 / 60.0)
 
-        // Midnight (halfway between Sunset and next Sunrise)
-        val midnightTransit = fixHour(sunsetTransit + nightDuration / 2.0)
+        // Midnight (halfway between sunset and next-day sunrise, using tomorrow's
+        // solar position so high-latitude / declination drift doesn't bias it)
+        val tomorrowSun = sunPosition(jd + 1.0)
+        val tomorrowDhuhr = fixHour(12.0 + timezoneOffsetHours - longitude / 15.0 - tomorrowSun.equationOfTime)
+        val tomorrowSunriseAngle = hourAngle(-0.8333, latitude, tomorrowSun.declination)
+        val tomorrowSunriseTransit = fixHour(tomorrowDhuhr - tomorrowSunriseAngle / 15.0)
+        val nightToTomorrow = fixHour(tomorrowSunriseTransit + 24.0 - sunsetTransit)
+        val midnightTransit = fixHour(sunsetTransit + nightToTomorrow / 2.0)
 
         fun toCalendar(hourDecimal: Double, offsetMinutes: Int): Calendar {
             val cal = date.clone() as Calendar
-            val totalSeconds = (hourDecimal * 3600).toInt() + (offsetMinutes * 60)
+            val totalSeconds = (hourDecimal * 3600).roundToInt() + (offsetMinutes * 60)
             val h = totalSeconds / 3600
             val m = (totalSeconds % 3600) / 60
             val s = totalSeconds % 60

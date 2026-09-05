@@ -11,6 +11,10 @@ class BootReceiver : BroadcastReceiver() {
 
     companion object {
         private const val TAG = "BootReceiver"
+        // AlarmManager exact-alarm permission change (API 31+); kept as string to
+        // avoid referencing S-only constants from all code paths.
+        private const val ACTION_SCHEDULE_EXACT_ALARM_STATE_CHANGED =
+            "android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED"
     }
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -19,10 +23,11 @@ class BootReceiver : BroadcastReceiver() {
 
         when (action) {
             Intent.ACTION_BOOT_COMPLETED,
-            Intent.ACTION_LOCKED_BOOT_COMPLETED,
             Intent.ACTION_MY_PACKAGE_REPLACED,
             Intent.ACTION_TIME_CHANGED,
-            Intent.ACTION_TIMEZONE_CHANGED -> {
+            Intent.ACTION_TIMEZONE_CHANGED,
+            Intent.ACTION_USER_UNLOCKED,
+            ACTION_SCHEDULE_EXACT_ALARM_STATE_CHANGED -> {
                 try {
                     val appSettings = AppSettings(context.applicationContext)
                     val notificationManager = AdhanNotificationManager(context.applicationContext)

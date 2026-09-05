@@ -13,13 +13,15 @@ import tech.sadique.qayam.data.model.AdhanSoundType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.time.Duration.Companion.seconds
 import kotlin.math.PI
-import kotlin.math.exp
 import kotlin.math.sin
 
 object AdhanAudioSynthesizer {
@@ -27,9 +29,12 @@ object AdhanAudioSynthesizer {
     private const val TAG = "AdhanAudio"
     private const val SAMPLE_RATE = 22050
 
+    private val synthScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var activeAudioTrack: AudioTrack? = null
     private var activeRingtone: Ringtone? = null
     private var playJob: Job? = null
+    private var focusRequest: Any? = null
+    private var focusListener: AudioManager.OnAudioFocusChangeListener? = null
 
     private val _isPlaying = MutableStateFlow(false)
     val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
@@ -51,24 +56,34 @@ object AdhanAudioSynthesizer {
             return
         }
 
+        val once = AtomicBoolean(false)
+        val done: () -> Unit = {
+            if (once.compareAndSet(false, true)) onComplete?.invoke()
+        }
+
         _isPlaying.value = true
         _currentlyPlayingSound.value = soundType
 
+        if (!requestAudioFocus(context.applicationContext, highPriorityAlarm)) {
+            Log.w(TAG, "Audio focus denied; playing anyway at requested volume")
+        }
+
         if (soundType == AdhanSoundType.SYSTEM_ALARM) {
-            playSystemAlarm(context, onComplete)
+            playSystemAlarm(context, done)
             return
         }
 
-        playJob = CoroutineScope(Dispatchers.Default).launch {
+        playJob = synthScope.launch {
             try {
                 val notes = getMelodySequence(soundType)
                 playSynthesizedSequence(notes, highPriorityAlarm, volume, this)
             } catch (e: Exception) {
                 Log.e(TAG, "Audio synthesis error", e)
             } finally {
+                abandonAudioFocus(context.applicationContext)
                 _isPlaying.value = false
                 _currentlyPlayingSound.value = null
-                onComplete?.invoke()
+                done()
             }
         }
     }
@@ -106,7 +121,66 @@ object AdhanAudioSynthesizer {
         _currentlyPlayingSound.value = null
     }
 
+    private fun requestAudioFocus(context: Context, highPriorityAlarm: Boolean): Boolean {
+        return try {
+            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+                ?: return false
+            val usage = if (highPriorityAlarm) AudioAttributes.USAGE_ALARM
+                else AudioAttributes.USAGE_NOTIFICATION
+            val attrs = AudioAttributes.Builder()
+                .setUsage(usage)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
+            focusListener = AudioManager.OnAudioFocusChangeListener { change ->
+                when (change) {
+                    AudioManager.AUDIOFOCUS_LOSS,
+                    AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> stopSound()
+                }
+            }
+            val res = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val req = android.media.AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE)
+                    .setAudioAttributes(attrs)
+                    .setOnAudioFocusChangeListener(focusListener!!)
+                    .build()
+                focusRequest = req
+                audioManager.requestAudioFocus(req)
+            } else {
+                @Suppress("DEPRECATION")
+                audioManager.requestAudioFocus(
+                    focusListener,
+                    if (highPriorityAlarm) AudioManager.STREAM_ALARM else AudioManager.STREAM_NOTIFICATION,
+                    AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE
+                )
+            }
+            res == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+        } catch (e: Exception) {
+            Log.w(TAG, "Audio focus request failed", e)
+            false
+        }
+    }
+
+    private fun abandonAudioFocus(context: Context) {
+        try {
+            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+                ?: return
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                (focusRequest as? android.media.AudioFocusRequest)?.let {
+                    audioManager.abandonAudioFocusRequest(it)
+                }
+            } else {
+                @Suppress("DEPRECATION")
+                focusListener?.let { audioManager.abandonAudioFocus(it) }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Audio focus abandon failed", e)
+        } finally {
+            focusRequest = null
+            focusListener = null
+        }
+    }
+
     private fun playSystemAlarm(context: Context, onComplete: (() -> Unit)?) {
+        val appContext = context.applicationContext
         try {
             var alertUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
             if (alertUri == null) {
@@ -115,30 +189,45 @@ object AdhanAudioSynthesizer {
             if (alertUri == null) {
                 alertUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
             }
+            if (alertUri == null) {
+                Log.w(TAG, "No system ringtone URI available; skipping system alarm")
+                abandonAudioFocus(appContext)
+                _isPlaying.value = false
+                _currentlyPlayingSound.value = null
+                onComplete?.invoke()
+                return
+            }
 
-            val ringtone = RingtoneManager.getRingtone(context.applicationContext, alertUri)
+            val ringtone = RingtoneManager.getRingtone(appContext, alertUri)
+            if (ringtone == null) {
+                Log.w(TAG, "System ringtone unavailable; skipping system alarm")
+                abandonAudioFocus(appContext)
+                _isPlaying.value = false
+                _currentlyPlayingSound.value = null
+                onComplete?.invoke()
+                return
+            }
             activeRingtone = ringtone
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                ringtone.audioAttributes = AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_ALARM)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .build()
-            } else {
-                @Suppress("DEPRECATION")
-                ringtone.streamType = AudioManager.STREAM_ALARM
-            }
+            ringtone.audioAttributes = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_ALARM)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
 
             ringtone.play()
 
-            // Auto-stop system ringtone after 15 seconds
-            playJob = CoroutineScope(Dispatchers.Default).launch {
-                kotlinx.coroutines.delay(15000)
+            // Auto-stop system ringtone after 15 seconds (once-guarded by caller)
+            playJob = synthScope.launch {
+                kotlinx.coroutines.delay(15.seconds)
                 stopSound()
+                abandonAudioFocus(appContext)
+                _isPlaying.value = false
+                _currentlyPlayingSound.value = null
                 onComplete?.invoke()
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error playing system alarm", e)
+            abandonAudioFocus(appContext)
             _isPlaying.value = false
             _currentlyPlayingSound.value = null
             onComplete?.invoke()
@@ -293,9 +382,7 @@ object AdhanAudioSynthesizer {
 
         activeAudioTrack = track
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            track.setVolume(volumeMultiplier.coerceIn(0f, 1f))
-        }
+        track.setVolume(volumeMultiplier.coerceIn(0f, 1f))
 
         track.play()
 
@@ -320,6 +407,7 @@ object AdhanAudioSynthesizer {
             val twoPi = 2.0 * PI
 
             for (i in 0 until numSamples) {
+                if (!scope.isActive) break
                 val t = i.toDouble() / SAMPLE_RATE
 
                 // ADSR Envelope
@@ -346,6 +434,7 @@ object AdhanAudioSynthesizer {
                 samples[i] = sampleValue.toShort()
             }
 
+            if (!scope.isActive) break
             track.write(samples, 0, samples.size)
         }
 

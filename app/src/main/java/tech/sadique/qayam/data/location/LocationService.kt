@@ -1,11 +1,13 @@
 package tech.sadique.qayam.data.location
 
-import android.annotation.SuppressLint
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.location.Geocoder
 import android.location.Location
 import android.os.Build
 import android.util.Log
+import androidx.core.content.ContextCompat
 import tech.sadique.qayam.data.model.LocationInfo
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
@@ -14,6 +16,8 @@ import com.google.android.gms.tasks.CancellationTokenSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.time.Duration.Companion.seconds
 import java.util.Locale
 import kotlin.coroutines.resume
 
@@ -44,37 +48,52 @@ class LocationService(private val context: Context) {
         )
     }
 
-    @SuppressLint("MissingPermission")
     suspend fun getCurrentGpsLocation(): LocationInfo? = withContext(Dispatchers.IO) {
+        // Caller-independent guard: never hit FusedLocation without runtime permission.
+        val hasPerm = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(
+                context, Manifest.permission.ACCESS_COARSE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+        if (!hasPerm) {
+            Log.w("LocationService", "Location permission not granted")
+            return@withContext null
+        }
         try {
-            val cts = CancellationTokenSource()
-            val location: Location? = suspendCancellableCoroutine { continuation ->
-                fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cts.token)
-                    .addOnSuccessListener { loc ->
-                        if (continuation.isActive) continuation.resume(loc)
-                    }
-                    .addOnFailureListener {
-                        // Fallback to last known location
-                        fusedLocationClient.lastLocation
-                            .addOnSuccessListener { lastLoc ->
-                                if (continuation.isActive) continuation.resume(lastLoc)
-                            }
-                            .addOnFailureListener {
-                                if (continuation.isActive) continuation.resume(null)
-                            }
-                    }
+            val location: Location? = withTimeoutOrNull(10.seconds) {
+                suspendCancellableCoroutine { continuation ->
+                    val cts = CancellationTokenSource()
+                    fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cts.token)
+                        .addOnSuccessListener { loc ->
+                            if (continuation.isActive) continuation.resume(loc)
+                        }
+                        .addOnFailureListener {
+                            // Fallback to last known location
+                            fusedLocationClient.lastLocation
+                                .addOnSuccessListener { lastLoc ->
+                                    if (continuation.isActive) continuation.resume(lastLoc)
+                                }
+                                .addOnFailureListener {
+                                    if (continuation.isActive) continuation.resume(null)
+                                }
+                        }
 
-                continuation.invokeOnCancellation {
-                    cts.cancel()
+                    continuation.invokeOnCancellation {
+                        cts.cancel()
+                    }
                 }
-            }
+            } ?: fetchLastKnownLocation()
 
-            if (location != null) {
-                val cityInfo = getCityNameFromCoordinates(location.latitude, location.longitude)
+            // getCurrentLocation may succeed with null (e.g. GPS off): fall back too.
+            val resolved = location ?: fetchLastKnownLocation()
+
+            if (resolved != null) {
+                val cityInfo = getCityNameFromCoordinates(resolved.latitude, resolved.longitude)
                 LocationInfo(
-                    latitude = location.latitude,
-                    longitude = location.longitude,
-                    altitude = location.altitude,
+                    latitude = resolved.latitude,
+                    longitude = resolved.longitude,
+                    altitude = resolved.altitude,
                     cityName = cityInfo.first,
                     countryName = cityInfo.second,
                     isGpsBased = true,
@@ -89,8 +108,22 @@ class LocationService(private val context: Context) {
         }
     }
 
+    private suspend fun fetchLastKnownLocation(): Location? =
+        suspendCancellableCoroutine { continuation ->
+            try {
+                fusedLocationClient.lastLocation
+                    .addOnSuccessListener { if (continuation.isActive) continuation.resume(it) }
+                    .addOnFailureListener { if (continuation.isActive) continuation.resume(null) }
+            } catch (e: SecurityException) {
+                if (continuation.isActive) continuation.resume(null)
+            }
+        }
+
     private fun getCityNameFromCoordinates(lat: Double, lng: Double): Pair<String, String> {
         return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !Geocoder.isPresent()) {
+                return String.format(Locale.US, "%.2f°, %.2f°", lat, lng) to "GPS Location"
+            }
             val geocoder = Geocoder(context, Locale.getDefault())
             val addresses = geocoder.getFromLocation(lat, lng, 1)
             if (!addresses.isNullOrEmpty()) {

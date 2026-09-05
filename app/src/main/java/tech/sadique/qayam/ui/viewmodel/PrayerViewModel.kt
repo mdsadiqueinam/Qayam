@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.util.Calendar
+import kotlin.time.Duration.Companion.seconds
 
 data class PrayerUiState(
     val settings: UserSettings = UserSettings(),
@@ -59,7 +60,6 @@ class PrayerViewModel(application: Application) : AndroidViewModel(application) 
                 notificationManager.scheduleUpcomingAlarms(appSettings)
             }
         }
-
         // Observe audio state
         viewModelScope.launch {
             AdhanAudioSynthesizer.isPlaying.collect { isPlaying ->
@@ -75,8 +75,9 @@ class PrayerViewModel(application: Application) : AndroidViewModel(application) 
         // Start real-time 1-second clock ticker
         startClockTicker()
 
-        // Auto fetch GPS location if enabled
-        if (_uiState.value.settings.isGpsAuto) {
+        // Auto fetch GPS location if enabled (read persisted value, not the
+        // default _uiState which is isGpsAuto=true before the flow emits).
+        if (appSettings.settings.value.isGpsAuto) {
             refreshGpsLocation()
         }
     }
@@ -103,7 +104,7 @@ class PrayerViewModel(application: Application) : AndroidViewModel(application) 
                     currentState = currentState
                 )
 
-                delay(1000)
+                delay(1.seconds)
             }
         }
     }
@@ -230,7 +231,6 @@ class PrayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     override fun onCleared() {
-        super.onCleared()
         tickerJob?.cancel()
         AdhanAudioSynthesizer.stopSound()
     }

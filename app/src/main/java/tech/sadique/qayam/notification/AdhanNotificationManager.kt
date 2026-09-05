@@ -214,54 +214,26 @@ class AdhanNotificationManager(private val context: Context) {
 
         try {
             if (canExact) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    val alarmClockInfo = AlarmManager.AlarmClockInfo(triggerTimeMillis, openAppPendingIntent)
-                    alarmManager.setAlarmClock(alarmClockInfo, pendingIntent)
-                } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    alarmManager.setExactAndAllowWhileIdle(
-                        AlarmManager.RTC_WAKEUP,
-                        triggerTimeMillis,
-                        pendingIntent
-                    )
-                } else {
-                    alarmManager.setExact(
-                        AlarmManager.RTC_WAKEUP,
-                        triggerTimeMillis,
-                        pendingIntent
-                    )
-                }
+                // setAlarmClock is strongest against Doze and shows a status-bar alarm
+                // icon; intended for the 5 daily prayers so adhan fires on time.
+                val alarmClockInfo = AlarmManager.AlarmClockInfo(triggerTimeMillis, openAppPendingIntent)
+                alarmManager.setAlarmClock(alarmClockInfo, pendingIntent)
             } else {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    alarmManager.setAndAllowWhileIdle(
-                        AlarmManager.RTC_WAKEUP,
-                        triggerTimeMillis,
-                        pendingIntent
-                    )
-                } else {
-                    alarmManager.set(
-                        AlarmManager.RTC_WAKEUP,
-                        triggerTimeMillis,
-                        pendingIntent
-                    )
-                }
+                alarmManager.setAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    triggerTimeMillis,
+                    pendingIntent
+                )
             }
             Log.d("AdhanAlarm", "Alarm scheduled for ${prayer.displayName} at $triggerTimeMillis (exact: $canExact)")
         } catch (e: SecurityException) {
             Log.w("AdhanAlarm", "Exact alarm permission denied, falling back to inexact alarm", e)
             try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    alarmManager.setAndAllowWhileIdle(
-                        AlarmManager.RTC_WAKEUP,
-                        triggerTimeMillis,
-                        pendingIntent
-                    )
-                } else {
-                    alarmManager.set(
-                        AlarmManager.RTC_WAKEUP,
-                        triggerTimeMillis,
-                        pendingIntent
-                    )
-                }
+                alarmManager.setAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    triggerTimeMillis,
+                    pendingIntent
+                )
             } catch (fallbackEx: Exception) {
                 Log.e("AdhanAlarm", "Failed to schedule fallback alarm", fallbackEx)
             }
@@ -276,13 +248,14 @@ class AdhanNotificationManager(private val context: Context) {
         }
     }
 
+    fun areNotificationsEnabled(): Boolean {
+        val nm = notificationManager ?: return false
+        return nm.areNotificationsEnabled()
+    }
+
     fun isIgnoringBatteryOptimizations(): Boolean {
         val powerManager = context.getSystemService<PowerManager>() ?: return true
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            powerManager.isIgnoringBatteryOptimizations(context.packageName)
-        } else {
-            true
-        }
+        return powerManager.isIgnoringBatteryOptimizations(context.packageName)
     }
 
     fun scheduleTestAlarm(

@@ -19,6 +19,15 @@ class AdhanAlarmReceiver : BroadcastReceiver() {
     }
 
     override fun onReceive(context: Context, intent: Intent) {
+        val pendingResult = goAsync()
+        try {
+            handleIntent(context, intent)
+        } finally {
+            pendingResult.finish()
+        }
+    }
+
+    private fun handleIntent(context: Context, intent: Intent) {
         val action = intent.action ?: return
         Log.d("AdhanReceiver", "Received action: $action")
 
@@ -50,7 +59,11 @@ class AdhanAlarmReceiver : BroadcastReceiver() {
                             highPriority = highPriority
                         )
                     } else {
-                        notificationManager.showPrayerNotification(prayerType, soundType, highPriority)
+                        if (notificationManager.areNotificationsEnabled()) {
+                            notificationManager.showPrayerNotification(prayerType, soundType, highPriority)
+                        } else {
+                            Log.w("AdhanReceiver", "POST_NOTIFICATIONS denied; skipping visual alert for ${prayerType.id}")
+                        }
                     }
                 }
 

@@ -126,11 +126,15 @@ fun MainPrayerScreen(
             }
         }
 
-        // Check location permission
+        // Check location permission (accept FINE or COARSE)
         val hasLocPerm = ContextCompat.checkSelfPermission(
             context,
             Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
+        ) == PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
         if (!hasLocPerm) {
             locationPermissionLauncher.launch(
                 arrayOf(
@@ -257,13 +261,24 @@ fun MainPrayerScreen(
                         modifier = Modifier
                             .clip(RoundedCornerShape(16.dp))
                             .clickable {
-                                locationPermissionLauncher.launch(
-                                    arrayOf(
-                                        Manifest.permission.ACCESS_FINE_LOCATION,
-                                        Manifest.permission.ACCESS_COARSE_LOCATION
+                                // Refresh happens in the permission callback on grant;
+                                // if already granted, refresh immediately.
+                                val granted = ContextCompat.checkSelfPermission(
+                                    context, Manifest.permission.ACCESS_FINE_LOCATION
+                                ) == PackageManager.PERMISSION_GRANTED ||
+                                    ContextCompat.checkSelfPermission(
+                                        context, Manifest.permission.ACCESS_COARSE_LOCATION
+                                    ) == PackageManager.PERMISSION_GRANTED
+                                if (granted) {
+                                    viewModel.refreshGpsLocation()
+                                } else {
+                                    locationPermissionLauncher.launch(
+                                        arrayOf(
+                                            Manifest.permission.ACCESS_FINE_LOCATION,
+                                            Manifest.permission.ACCESS_COARSE_LOCATION
+                                        )
                                     )
-                                )
-                                viewModel.refreshGpsLocation()
+                                }
                             }
                             .testTag("location_chip")
                     ) {

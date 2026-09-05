@@ -47,7 +47,15 @@ class AdhanPlaybackService : Service() {
             val intent = Intent(context, AdhanPlaybackService::class.java).apply {
                 action = ACTION_STOP_PLAYBACK
             }
-            context.startService(intent)
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.startForegroundService(intent)
+                } else {
+                    context.startService(intent)
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Could not start stop-service from background", e)
+            }
         }
     }
 
@@ -138,12 +146,7 @@ class AdhanPlaybackService : Service() {
     private fun stopPlaybackAndFinish() {
         AdhanAudioSynthesizer.stopSound()
         releaseWakeLock()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            stopForeground(STOP_FOREGROUND_DETACH)
-        } else {
-            @Suppress("DEPRECATION")
-            stopForeground(false)
-        }
+        stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
 
