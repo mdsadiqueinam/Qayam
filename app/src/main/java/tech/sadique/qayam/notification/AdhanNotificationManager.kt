@@ -19,7 +19,7 @@ import tech.sadique.qayam.data.calculator.PrayerTimeCalculator
 import tech.sadique.qayam.data.model.AdhanSoundType
 import tech.sadique.qayam.data.model.PrayerSchedule
 import tech.sadique.qayam.data.model.PrayerType
-import tech.sadique.qayam.data.preferences.AppSettings
+import tech.sadique.qayam.data.preferences.UserSettings
 import tech.sadique.qayam.receiver.AdhanAlarmReceiver
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -120,10 +120,10 @@ class AdhanNotificationManager(private val context: Context) {
 
     /**
      * Schedules the next exact alarms for all upcoming daily prayers.
+     * Takes an already-loaded [UserSettings] snapshot so background callers
+     * (receivers) never read a cold flow.
      */
-    @SuppressLint("ScheduleExactAlarm")
-    fun scheduleUpcomingAlarms(appSettings: AppSettings) {
-        val settings = appSettings.settings.value
+    fun scheduleUpcomingAlarms(settings: UserSettings) {
         val loc = settings.currentLocation
         val now = Calendar.getInstance()
         val tzOffset = now.timeZone.getOffset(now.timeInMillis) / 3600000.0

@@ -11,23 +11,30 @@ import tech.sadique.qayam.data.preferences.AppSettings
 import tech.sadique.qayam.notification.AdhanNotificationManager
 
 import tech.sadique.qayam.service.AdhanPlaybackService
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 class AdhanAlarmReceiver : BroadcastReceiver() {
 
     companion object {
         const val ACTION_ADHAN_ALARM = "tech.sadique.qayam.ACTION_ADHAN_ALARM"
+        private val receiverScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     }
 
     override fun onReceive(context: Context, intent: Intent) {
         val pendingResult = goAsync()
-        try {
-            handleIntent(context, intent)
-        } finally {
-            pendingResult.finish()
+        receiverScope.launch {
+            try {
+                handleIntent(context, intent)
+            } finally {
+                pendingResult.finish()
+            }
         }
     }
 
-    private fun handleIntent(context: Context, intent: Intent) {
+    private suspend fun handleIntent(context: Context, intent: Intent) {
         val action = intent.action ?: return
         Log.d("AdhanReceiver", "Received action: $action")
 
@@ -44,7 +51,7 @@ class AdhanAlarmReceiver : BroadcastReceiver() {
                 val prayerId = intent.getStringExtra(AdhanNotificationManager.EXTRA_PRAYER_ID) ?: PrayerType.FAJR.id
                 val prayerType = PrayerType.fromId(prayerId)
 
-                val currentSettings = appSettings.settings.value
+                val currentSettings = appSettings.snapshot()
                 val isEnabled = currentSettings.prayerAlertEnabled[prayerType] ?: prayerType.defaultAlertEnabled
 
                 if (isEnabled) {
@@ -68,7 +75,7 @@ class AdhanAlarmReceiver : BroadcastReceiver() {
                 }
 
                 // Reschedule for subsequent prayers
-                notificationManager.scheduleUpcomingAlarms(appSettings)
+                notificationManager.scheduleUpcomingAlarms(currentSettings)
             }
         }
     }

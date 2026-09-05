@@ -50,7 +50,7 @@ data class PrayerTickerState(
 
 class PrayerViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val appSettings = AppSettings(application.applicationContext)
+    private val appSettings = AppSettings(application.applicationContext, viewModelScope)
     private val locationService = LocationService(application.applicationContext)
     private val notificationManager = AdhanNotificationManager(application.applicationContext)
 
@@ -63,12 +63,18 @@ class PrayerViewModel(application: Application) : AndroidViewModel(application) 
     private var tickerJob: Job? = null
 
     init {
-        // Observe settings changes
+        // Observe settings changes. The first emission is the persisted value
+        // (not a placeholder), so GPS auto-fetch is triggered from it.
+        var firstSettings = true
         viewModelScope.launch {
             appSettings.settings.collect { newSettings ->
                 _uiState.value = _uiState.value.copy(settings = newSettings)
                 recalculateSchedule()
-                notificationManager.scheduleUpcomingAlarms(appSettings)
+                notificationManager.scheduleUpcomingAlarms(newSettings)
+                if (firstSettings) {
+                    firstSettings = false
+                    if (newSettings.isGpsAuto) refreshGpsLocation()
+                }
             }
         }
         // Observe audio state
@@ -85,12 +91,6 @@ class PrayerViewModel(application: Application) : AndroidViewModel(application) 
 
         // Start real-time 1-second clock ticker
         startClockTicker()
-
-        // Auto fetch GPS location if enabled (read persisted value, not the
-        // default _uiState which is isGpsAuto=true before the flow emits).
-        if (appSettings.settings.value.isGpsAuto) {
-            refreshGpsLocation()
-        }
     }
 
     private fun startClockTicker() {
@@ -160,43 +160,43 @@ class PrayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun selectPresetLocation(location: LocationInfo) {
-        appSettings.updateLocation(location)
+        viewModelScope.launch { appSettings.updateLocation(location) }
     }
 
     fun updateCalculationMethod(method: CalculationMethod) {
-        appSettings.updateCalculationMethod(method)
+        viewModelScope.launch { appSettings.updateCalculationMethod(method) }
     }
 
     fun updateJuristicMethod(juristic: JuristicMethod) {
-        appSettings.updateJuristicMethod(juristic)
+        viewModelScope.launch { appSettings.updateJuristicMethod(juristic) }
     }
 
     fun updateHighLatitudeRule(rule: HighLatitudeRule) {
-        appSettings.updateHighLatitudeRule(rule)
+        viewModelScope.launch { appSettings.updateHighLatitudeRule(rule) }
     }
 
     fun updateThemeMode(mode: AppThemeMode) {
-        appSettings.updateThemeMode(mode)
+        viewModelScope.launch { appSettings.updateThemeMode(mode) }
     }
 
     fun updateHighPrioritySound(enabled: Boolean) {
-        appSettings.updateHighPrioritySound(enabled)
+        viewModelScope.launch { appSettings.updateHighPrioritySound(enabled) }
     }
 
     fun updateIs24HourFormat(is24H: Boolean) {
-        appSettings.updateIs24HourFormat(is24H)
+        viewModelScope.launch { appSettings.updateIs24HourFormat(is24H) }
     }
 
     fun updatePrayerAlertSound(prayer: PrayerType, sound: AdhanSoundType) {
-        appSettings.updatePrayerAlertSound(prayer, sound)
+        viewModelScope.launch { appSettings.updatePrayerAlertSound(prayer, sound) }
     }
 
     fun updatePrayerAlertEnabled(prayer: PrayerType, enabled: Boolean) {
-        appSettings.updatePrayerAlertEnabled(prayer, enabled)
+        viewModelScope.launch { appSettings.updatePrayerAlertEnabled(prayer, enabled) }
     }
 
     fun updatePrayerMinuteOffset(prayer: PrayerType, offset: Int) {
-        appSettings.updatePrayerMinuteOffset(prayer, offset)
+        viewModelScope.launch { appSettings.updatePrayerMinuteOffset(prayer, offset) }
     }
 
     fun playPreviewSound(soundType: AdhanSoundType) {

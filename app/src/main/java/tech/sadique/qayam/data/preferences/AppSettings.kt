@@ -1,8 +1,15 @@
 package tech.sadique.qayam.data.preferences
 
 import android.content.Context
-import android.content.SharedPreferences
-import androidx.core.content.edit
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.doublePreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
 import tech.sadique.qayam.data.model.AdhanSoundType
 import tech.sadique.qayam.data.model.AppThemeMode
 import tech.sadique.qayam.data.model.CalculationMethod
@@ -10,9 +17,16 @@ import tech.sadique.qayam.data.model.HighLatitudeRule
 import tech.sadique.qayam.data.model.JuristicMethod
 import tech.sadique.qayam.data.model.LocationInfo
 import tech.sadique.qayam.data.model.PrayerType
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import java.io.IOException
 
 data class UserSettings(
     val calculationMethod: CalculationMethod = CalculationMethod.MUSLIM_WORLD_LEAGUE,
@@ -52,134 +66,145 @@ data class UserSettings(
     )
 )
 
-class AppSettings(context: Context) {
+private val Context.salahDataStore by preferencesDataStore(
+    name = "salah_prefs",
+    corruptionHandler = ReplaceFileCorruptionHandler { emptyPreferences() }
+)
 
-    private val prefs: SharedPreferences = context.getSharedPreferences("salah_prefs", Context.MODE_PRIVATE)
+private object Keys {
+    val CALC_METHOD = stringPreferencesKey("calc_method")
+    val JURISTIC = stringPreferencesKey("juristic_method")
+    val HIGH_LAT = stringPreferencesKey("high_lat_rule")
+    val THEME = stringPreferencesKey("theme_mode")
+    val HIGH_PRIORITY = booleanPreferencesKey("high_priority_sound")
+    val GPS_AUTO = booleanPreferencesKey("is_gps_auto")
+    val H24 = booleanPreferencesKey("is_24h")
+    val LAT = doublePreferencesKey("loc_lat")
+    val LNG = doublePreferencesKey("loc_lng")
+    val CITY = stringPreferencesKey("loc_city")
+    val COUNTRY = stringPreferencesKey("loc_country")
+    fun sound(prayer: PrayerType) = stringPreferencesKey("sound_${prayer.id}")
+    fun enabled(prayer: PrayerType) = booleanPreferencesKey("enabled_${prayer.id}")
+    fun offset(prayer: PrayerType) = intPreferencesKey("offset_${prayer.id}")
+}
 
-    private val _settings = MutableStateFlow(loadSettings())
-    val settings: StateFlow<UserSettings> = _settings.asStateFlow()
+private fun defaultSound(prayer: PrayerType): AdhanSoundType = when (prayer) {
+    PrayerType.SUNRISE, PrayerType.GURUB_E_AFTAB -> AdhanSoundType.SILENT
+    PrayerType.ISRAQ -> AdhanSoundType.GENTLE_CHIME
+    PrayerType.ASR -> AdhanSoundType.MADINAH
+    PrayerType.MAGHRIB -> AdhanSoundType.AL_AQSA
+    else -> AdhanSoundType.MAKKAH
+}
 
-    private fun loadSettings(): UserSettings {
-        val methodId = prefs.getString("calc_method", CalculationMethod.MUSLIM_WORLD_LEAGUE.id) ?: CalculationMethod.MUSLIM_WORLD_LEAGUE.id
-        val juristicId = prefs.getString("juristic_method", JuristicMethod.STANDARD.id) ?: JuristicMethod.STANDARD.id
-        val highLatId = prefs.getString("high_lat_rule", HighLatitudeRule.ANGLE_BASED.id) ?: HighLatitudeRule.ANGLE_BASED.id
-        val themeId = prefs.getString("theme_mode", AppThemeMode.SYSTEM.id) ?: AppThemeMode.SYSTEM.id
-        val highPriority = prefs.getBoolean("high_priority_sound", true)
-        val isGps = prefs.getBoolean("is_gps_auto", true)
-        val is24H = prefs.getBoolean("is_24h", false)
+/** Maps raw preferences to settings. Internal for unit tests (legacy-format coverage). */
+internal fun Preferences.toUserSettings(): UserSettings {
+    val lat = this[Keys.LAT] ?: 21.4225
+    val lng = this[Keys.LNG] ?: 39.8262
+    val isGps = this[Keys.GPS_AUTO] ?: true
+    return UserSettings(
+        calculationMethod = CalculationMethod.fromId(
+            this[Keys.CALC_METHOD] ?: CalculationMethod.MUSLIM_WORLD_LEAGUE.id
+        ),
+        juristicMethod = JuristicMethod.fromId(
+            this[Keys.JURISTIC] ?: JuristicMethod.STANDARD.id
+        ),
+        highLatitudeRule = HighLatitudeRule.fromId(
+            this[Keys.HIGH_LAT] ?: HighLatitudeRule.ANGLE_BASED.id
+        ),
+        themeMode = AppThemeMode.fromId(
+            this[Keys.THEME] ?: AppThemeMode.SYSTEM.id
+        ),
+        highPrioritySound = this[Keys.HIGH_PRIORITY] ?: true,
+        isGpsAuto = isGps,
+        is24HourFormat = this[Keys.H24] ?: false,
+        currentLocation = LocationInfo(
+            latitude = lat,
+            longitude = lng,
+            cityName = this[Keys.CITY] ?: "Makkah",
+            countryName = this[Keys.COUNTRY] ?: "Saudi Arabia",
+            isGpsBased = isGps
+        ),
+        prayerAlertSounds = PrayerType.dailyPrayers.associateWith { prayer ->
+            AdhanSoundType.fromId(this[Keys.sound(prayer)] ?: defaultSound(prayer).id)
+        },
+        prayerAlertEnabled = PrayerType.dailyPrayers.associateWith { prayer ->
+            this[Keys.enabled(prayer)] ?: prayer.defaultAlertEnabled
+        },
+        minuteOffsets = PrayerType.dailyPrayers.associateWith { prayer ->
+            this[Keys.offset(prayer)] ?: 0
+        }
+    )
+}
 
-        val lat = prefs.getString("loc_lat_d", null)?.toDoubleOrNull()
-            ?: prefs.getFloat("loc_lat", 21.4225f).toDouble()
-        val lng = prefs.getString("loc_lng_d", null)?.toDoubleOrNull()
-            ?: prefs.getFloat("loc_lng", 39.8262f).toDouble()
-        val city = prefs.getString("loc_city", "Makkah") ?: "Makkah"
-        val country = prefs.getString("loc_country", "Saudi Arabia") ?: "Saudi Arabia"
+class AppSettings(
+    private val context: Context,
+    scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+) {
 
-        val alertSounds = PrayerType.dailyPrayers.associateWith { prayer ->
-            val defaultSound = when (prayer) {
-                PrayerType.SUNRISE, PrayerType.GURUB_E_AFTAB -> AdhanSoundType.SILENT
-                PrayerType.ISRAQ -> AdhanSoundType.GENTLE_CHIME
-                PrayerType.ASR -> AdhanSoundType.MADINAH
-                PrayerType.MAGHRIB -> AdhanSoundType.AL_AQSA
-                else -> AdhanSoundType.MAKKAH
+    val settings: StateFlow<UserSettings> = context.salahDataStore.data
+        .catch { e ->
+            if (e is IOException) emit(emptyPreferences()) else throw e
+        }
+        .map { it.toUserSettings() }
+        .stateIn(scope, SharingStarted.Eagerly, UserSettings())
+
+    /** One-shot read for background callers (receivers) that cannot rely on a warm flow. */
+    suspend fun snapshot(): UserSettings =
+        context.salahDataStore.data
+            .catch { e ->
+                if (e is IOException) emit(emptyPreferences()) else throw e
             }
-            val soundId = prefs.getString("sound_${prayer.id}", defaultSound.id) ?: defaultSound.id
-            AdhanSoundType.fromId(soundId)
+            .map { it.toUserSettings() }
+            .first()
+
+    /** Clears the store back to defaults (used by tests; future Settings reset action). */
+    suspend fun resetToDefaults() {
+        context.salahDataStore.edit { it.clear() }
+    }
+
+    suspend fun updateCalculationMethod(method: CalculationMethod) {
+        context.salahDataStore.edit { it[Keys.CALC_METHOD] = method.id }
+    }
+
+    suspend fun updateJuristicMethod(juristic: JuristicMethod) {
+        context.salahDataStore.edit { it[Keys.JURISTIC] = juristic.id }
+    }
+
+    suspend fun updateHighLatitudeRule(rule: HighLatitudeRule) {
+        context.salahDataStore.edit { it[Keys.HIGH_LAT] = rule.id }
+    }
+
+    suspend fun updateThemeMode(mode: AppThemeMode) {
+        context.salahDataStore.edit { it[Keys.THEME] = mode.id }
+    }
+
+    suspend fun updateHighPrioritySound(enabled: Boolean) {
+        context.salahDataStore.edit { it[Keys.HIGH_PRIORITY] = enabled }
+    }
+
+    suspend fun updateIs24HourFormat(is24H: Boolean) {
+        context.salahDataStore.edit { it[Keys.H24] = is24H }
+    }
+
+    suspend fun updatePrayerAlertSound(prayer: PrayerType, sound: AdhanSoundType) {
+        context.salahDataStore.edit { it[Keys.sound(prayer)] = sound.id }
+    }
+
+    suspend fun updatePrayerAlertEnabled(prayer: PrayerType, enabled: Boolean) {
+        context.salahDataStore.edit { it[Keys.enabled(prayer)] = enabled }
+    }
+
+    suspend fun updatePrayerMinuteOffset(prayer: PrayerType, offset: Int) {
+        context.salahDataStore.edit { it[Keys.offset(prayer)] = offset }
+    }
+
+    suspend fun updateLocation(location: LocationInfo) {
+        context.salahDataStore.edit {
+            it[Keys.LAT] = location.latitude
+            it[Keys.LNG] = location.longitude
+            it[Keys.CITY] = location.cityName
+            it[Keys.COUNTRY] = location.countryName
+            it[Keys.GPS_AUTO] = location.isGpsBased
         }
-
-        val alertEnabled = PrayerType.dailyPrayers.associateWith { prayer ->
-            prefs.getBoolean("enabled_${prayer.id}", prayer.defaultAlertEnabled)
-        }
-
-        val offsets = PrayerType.dailyPrayers.associateWith { prayer ->
-            prefs.getInt("offset_${prayer.id}", 0)
-        }
-
-        return UserSettings(
-            calculationMethod = CalculationMethod.fromId(methodId),
-            juristicMethod = JuristicMethod.fromId(juristicId),
-            highLatitudeRule = HighLatitudeRule.fromId(highLatId),
-            themeMode = AppThemeMode.fromId(themeId),
-            highPrioritySound = highPriority,
-            isGpsAuto = isGps,
-            is24HourFormat = is24H,
-            currentLocation = LocationInfo(
-                latitude = lat,
-                longitude = lng,
-                cityName = city,
-                countryName = country,
-                isGpsBased = isGps
-            ),
-            prayerAlertSounds = alertSounds,
-            prayerAlertEnabled = alertEnabled,
-            minuteOffsets = offsets
-        )
-    }
-
-    fun updateCalculationMethod(method: CalculationMethod) {
-        prefs.edit { putString("calc_method", method.id) }
-        _settings.value = _settings.value.copy(calculationMethod = method)
-    }
-
-    fun updateJuristicMethod(juristic: JuristicMethod) {
-        prefs.edit { putString("juristic_method", juristic.id) }
-        _settings.value = _settings.value.copy(juristicMethod = juristic)
-    }
-
-    fun updateHighLatitudeRule(rule: HighLatitudeRule) {
-        prefs.edit { putString("high_lat_rule", rule.id) }
-        _settings.value = _settings.value.copy(highLatitudeRule = rule)
-    }
-
-    fun updateThemeMode(mode: AppThemeMode) {
-        prefs.edit { putString("theme_mode", mode.id) }
-        _settings.value = _settings.value.copy(themeMode = mode)
-    }
-
-    fun updateHighPrioritySound(enabled: Boolean) {
-        prefs.edit { putBoolean("high_priority_sound", enabled) }
-        _settings.value = _settings.value.copy(highPrioritySound = enabled)
-    }
-
-    fun updateIs24HourFormat(is24H: Boolean) {
-        prefs.edit { putBoolean("is_24h", is24H) }
-        _settings.value = _settings.value.copy(is24HourFormat = is24H)
-    }
-
-    fun updatePrayerAlertSound(prayer: PrayerType, sound: AdhanSoundType) {
-        prefs.edit { putString("sound_${prayer.id}", sound.id) }
-        val newMap = _settings.value.prayerAlertSounds.toMutableMap()
-        newMap[prayer] = sound
-        _settings.value = _settings.value.copy(prayerAlertSounds = newMap)
-    }
-
-    fun updatePrayerAlertEnabled(prayer: PrayerType, enabled: Boolean) {
-        prefs.edit { putBoolean("enabled_${prayer.id}", enabled) }
-        val newMap = _settings.value.prayerAlertEnabled.toMutableMap()
-        newMap[prayer] = enabled
-        _settings.value = _settings.value.copy(prayerAlertEnabled = newMap)
-    }
-
-    fun updatePrayerMinuteOffset(prayer: PrayerType, offset: Int) {
-        prefs.edit { putInt("offset_${prayer.id}", offset) }
-        val newMap = _settings.value.minuteOffsets.toMutableMap()
-        newMap[prayer] = offset
-        _settings.value = _settings.value.copy(minuteOffsets = newMap)
-    }
-
-    fun updateLocation(location: LocationInfo) {
-        prefs.edit {
-            putString("loc_lat_d", location.latitude.toString())
-            putString("loc_lng_d", location.longitude.toString())
-            remove("loc_lat")
-            remove("loc_lng")
-            putString("loc_city", location.cityName)
-            putString("loc_country", location.countryName)
-            putBoolean("is_gps_auto", location.isGpsBased)
-        }
-        _settings.value = _settings.value.copy(
-            currentLocation = location,
-            isGpsAuto = location.isGpsBased
-        )
     }
 }

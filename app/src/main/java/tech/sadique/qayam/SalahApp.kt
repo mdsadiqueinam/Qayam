@@ -6,8 +6,14 @@ import android.app.NotificationManager
 import android.media.AudioAttributes
 import android.os.Build
 import androidx.core.content.getSystemService
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 class SalahApp : Application() {
+
+    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     companion object {
         const val ADHAN_CHANNEL_ID = "salah_adhan_channel_high_priority"
@@ -22,12 +28,14 @@ class SalahApp : Application() {
     }
 
     private fun armUpcomingAlarms() {
-        try {
-            val appSettings = tech.sadique.qayam.data.preferences.AppSettings(this)
-            val notificationManager = tech.sadique.qayam.notification.AdhanNotificationManager(this)
-            notificationManager.scheduleUpcomingAlarms(appSettings)
-        } catch (e: Exception) {
-            android.util.Log.e("SalahApp", "Failed to schedule upcoming alarms on app launch", e)
+        applicationScope.launch {
+            try {
+                val appSettings = tech.sadique.qayam.data.preferences.AppSettings(this@SalahApp)
+                val notificationManager = tech.sadique.qayam.notification.AdhanNotificationManager(this@SalahApp)
+                notificationManager.scheduleUpcomingAlarms(appSettings.snapshot())
+            } catch (e: Exception) {
+                android.util.Log.e("SalahApp", "Failed to schedule upcoming alarms on app launch", e)
+            }
         }
     }
 
