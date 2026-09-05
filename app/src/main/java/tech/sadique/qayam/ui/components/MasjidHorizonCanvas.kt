@@ -102,12 +102,25 @@ fun MasjidHorizonCanvas(
                 )
             )
 
+            // 1b. Top scrim so the pill/clock/tag overlay stays legible
+            // over bright skies and celestial bodies on short cards.
+            drawRect(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        Color.Black.copy(alpha = 0.30f),
+                        Color.Transparent
+                    ),
+                    startY = 0f,
+                    endY = height * 0.55f
+                )
+            )
+
             // 2. Draw Stars (if night or twilight)
             if (showStars) {
                 drawStars(width, height * 0.7f, starTwinkle)
             }
 
-            val horizonY = height * 0.75f
+            val horizonY = height * 0.80f
 
             // 3. Draw Celestial Arc (Sun / Moon orbit guide line)
             val arcPath = Path().apply {

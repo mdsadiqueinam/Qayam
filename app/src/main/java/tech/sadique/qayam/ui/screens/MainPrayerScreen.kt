@@ -637,7 +637,7 @@ private fun DateSubtitleItem(
  * Collects only the per-second clock flow.
  */
 @Composable
-private fun HeroItem(
+internal fun HeroItem(
     tickerFlow: StateFlow<PrayerTickerState>,
     is24Hour: Boolean,
     modifier: Modifier = Modifier
@@ -651,12 +651,18 @@ private fun HeroItem(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = 230.dp)
             .testTag("hero_horizon_card"),
         shape = RoundedCornerShape(28.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
+        // Fixed height: Box(fillMaxSize) below must resolve against a bounded
+        // height, otherwise (e.g. inside a LazyColumn item) it expands to the
+        // whole viewport and the hero swallows the screen.
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(260.dp)
+        ) {
             MasjidHorizonCanvas(
                 state = state,
                 modifier = Modifier

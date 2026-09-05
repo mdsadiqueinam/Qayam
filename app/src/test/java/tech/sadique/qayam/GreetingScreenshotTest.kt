@@ -54,11 +54,15 @@ class GreetingScreenshotTest {
 
     @Test
     fun prayer_card_night_mosque_screenshot() {
+        val testCal = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 19)
+            set(Calendar.MINUTE, 45)
+        }
         composeTestRule.setContent {
             SalahTheme(themeMode = AppThemeMode.NIGHT_MOSQUE) {
                 PrayerCard(
                     prayer = PrayerType.ISHA,
-                    time = Calendar.getInstance(),
+                    time = testCal,
                     isCurrent = true,
                     isNext = false,
                     is24Hour = false,
@@ -76,11 +80,15 @@ class GreetingScreenshotTest {
 
     @Test
     fun prayer_card_muted_screenshot() {
+        val testCal = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 6)
+            set(Calendar.MINUTE, 5)
+        }
         composeTestRule.setContent {
             SalahTheme(themeMode = AppThemeMode.DARK) {
                 PrayerCard(
                     prayer = PrayerType.SUNRISE,
-                    time = Calendar.getInstance(),
+                    time = testCal,
                     isCurrent = false,
                     isNext = false,
                     is24Hour = true,
