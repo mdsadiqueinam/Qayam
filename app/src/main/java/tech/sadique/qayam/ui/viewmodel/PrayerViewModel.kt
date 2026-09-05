@@ -32,12 +32,20 @@ import kotlin.time.Duration.Companion.seconds
 data class PrayerUiState(
     val settings: UserSettings = UserSettings(),
     val schedule: PrayerSchedule? = null,
-    val currentState: CurrentPrayerState? = null,
-    val currentTimeCalendar: Calendar = Calendar.getInstance(),
     val isLocationLoading: Boolean = false,
     val locationErrorMessage: String? = null,
     val isPlayingSound: Boolean = false,
     val playingSoundType: AdhanSoundType? = null
+)
+
+/**
+ * Per-second clock state, collected only by the composables that render
+ * live time (clock, countdown, horizon). Kept separate from [PrayerUiState]
+ * so the rest of the UI does not recompose every second.
+ */
+data class PrayerTickerState(
+    val currentTimeMillis: Long = System.currentTimeMillis(),
+    val currentState: CurrentPrayerState? = null
 )
 
 class PrayerViewModel(application: Application) : AndroidViewModel(application) {
@@ -48,6 +56,9 @@ class PrayerViewModel(application: Application) : AndroidViewModel(application) 
 
     private val _uiState = MutableStateFlow(PrayerUiState())
     val uiState: StateFlow<PrayerUiState> = _uiState.asStateFlow()
+
+    private val _tickerState = MutableStateFlow(PrayerTickerState())
+    val tickerState: StateFlow<PrayerTickerState> = _tickerState.asStateFlow()
 
     private var tickerJob: Job? = null
 
@@ -86,27 +97,29 @@ class PrayerViewModel(application: Application) : AndroidViewModel(application) 
         tickerJob?.cancel()
         tickerJob = viewModelScope.launch {
             while (isActive) {
-                val now = Calendar.getInstance()
-                val schedule = _uiState.value.schedule
-                val loc = _uiState.value.settings.currentLocation
-
-                val currentState = if (schedule != null) {
-                    PrayerTimeCalculator.calculateCurrentState(
-                        currentTime = now,
-                        schedule = schedule,
-                        latitude = loc.latitude,
-                        longitude = loc.longitude
-                    )
-                } else null
-
-                _uiState.value = _uiState.value.copy(
-                    currentTimeCalendar = now,
-                    currentState = currentState
-                )
-
-                delay(1.seconds)
+                refreshTicker(Calendar.getInstance())
+                // Align to the next wall-clock second to avoid drift/jitter.
+                val now = System.currentTimeMillis()
+                delay(1000 - (now % 1000))
             }
         }
+    }
+
+    private fun refreshTicker(now: Calendar) {
+        val schedule = _uiState.value.schedule
+        val loc = _uiState.value.settings.currentLocation
+        val currentState = if (schedule != null) {
+            PrayerTimeCalculator.calculateCurrentState(
+                currentTime = now,
+                schedule = schedule,
+                latitude = loc.latitude,
+                longitude = loc.longitude
+            )
+        } else null
+        _tickerState.value = PrayerTickerState(
+            currentTimeMillis = now.timeInMillis,
+            currentState = currentState
+        )
     }
 
     fun recalculateSchedule() {
@@ -126,17 +139,8 @@ class PrayerViewModel(application: Application) : AndroidViewModel(application) 
             minuteOffsets = settings.minuteOffsets
         )
 
-        val currentState = PrayerTimeCalculator.calculateCurrentState(
-            currentTime = now,
-            schedule = schedule,
-            latitude = loc.latitude,
-            longitude = loc.longitude
-        )
-
-        _uiState.value = _uiState.value.copy(
-            schedule = schedule,
-            currentState = currentState
-        )
+        _uiState.value = _uiState.value.copy(schedule = schedule)
+        refreshTicker(now)
     }
 
     fun refreshGpsLocation() {
@@ -221,7 +225,7 @@ class PrayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun scheduleTestAlarm(delaySeconds: Int = 10) {
-        val nextPrayer = _uiState.value.currentState?.nextPrayer ?: PrayerType.FAJR
+        val nextPrayer = _tickerState.value.currentState?.nextPrayer ?: PrayerType.FAJR
         val soundType = _uiState.value.settings.prayerAlertSounds[nextPrayer] ?: AdhanSoundType.TAKBEER_ONLY
         notificationManager.scheduleTestAlarm(
             delaySeconds = delaySeconds,

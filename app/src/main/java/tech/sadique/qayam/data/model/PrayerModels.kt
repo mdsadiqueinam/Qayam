@@ -29,6 +29,10 @@ enum class PrayerType(
         val obligatories: List<PrayerType>
             get() = listOf(FAJR, DHUHR, ASR, MAGHRIB, ISHA)
     }
+
+    /** Single source of truth: sunrise/sunset markers never alert by default. */
+    val defaultAlertEnabled: Boolean
+        get() = this != SUNRISE && this != GURUB_E_AFTAB
 }
 
 enum class AdhanSoundType(

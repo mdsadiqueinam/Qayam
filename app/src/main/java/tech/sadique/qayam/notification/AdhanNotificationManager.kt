@@ -157,7 +157,7 @@ class AdhanNotificationManager(private val context: Context) {
         val nowMillis = now.timeInMillis
 
         for (prayer in prayers) {
-            val isEnabled = settings.prayerAlertEnabled[prayer] ?: false
+            val isEnabled = settings.prayerAlertEnabled[prayer] ?: prayer.defaultAlertEnabled
             if (!isEnabled) {
                 cancelAlarm(prayer)
                 continue

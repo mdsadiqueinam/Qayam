@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
@@ -54,7 +55,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -69,10 +69,11 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -97,9 +98,26 @@ fun SettingsScreen(
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val settings = uiState.settings
-    var selectedPrayerForSound by remember { mutableStateOf<PrayerType?>(null) }
+    var selectedPrayerId by rememberSaveable { mutableStateOf<String?>(null) }
+    val selectedPrayerForSound = selectedPrayerId?.let { PrayerType.fromId(it) }
+
+    // Hoisted above LazyColumn: permission status refreshes on return from Settings.
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var canExactAlarms by rememberSaveable { mutableStateOf(viewModel.canScheduleExactAlarms()) }
+    var isBatteryIgnored by rememberSaveable { mutableStateOf(viewModel.isIgnoringBatteryOptimizations()) }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                canExactAlarms = viewModel.canScheduleExactAlarms()
+                isBatteryIgnored = viewModel.isIgnoringBatteryOptimizations()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     Scaffold(
         modifier = modifier
@@ -381,7 +399,7 @@ fun SettingsScreen(
                         )
 
                         PrayerType.dailyPrayers.forEach { prayer ->
-                            val isEnabled = settings.prayerAlertEnabled[prayer] ?: (prayer != PrayerType.SUNRISE && prayer != PrayerType.GURUB_E_AFTAB)
+                            val isEnabled = settings.prayerAlertEnabled[prayer] ?: prayer.defaultAlertEnabled
                             val sound = settings.prayerAlertSounds[prayer] ?: AdhanSoundType.MAKKAH
                             val isPlayingThis = uiState.isPlayingSound && uiState.playingSoundType == sound
 
@@ -393,7 +411,7 @@ fun SettingsScreen(
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(12.dp))
                                     .clickable(enabled = isEnabled) {
-                                        selectedPrayerForSound = prayer
+                                        selectedPrayerId = prayer.id
                                     }
                                     .testTag("prayer_settings_card_${prayer.id}")
                             ) {
@@ -441,7 +459,7 @@ fun SettingsScreen(
                                             ) {
                                                 Icon(
                                                     imageVector = if (isPlayingThis) Icons.Default.Stop else Icons.Default.GraphicEq,
-                                                    contentDescription = "Test sound",
+                                                    contentDescription = "Preview ${sound.title} for ${prayer.displayName}" + if (isPlayingThis) ", playing, tap to stop" else "",
                                                     tint = if (isPlayingThis) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
                                                 )
                                             }
@@ -464,23 +482,7 @@ fun SettingsScreen(
 
             // 5. Background Reliability & Exact Alarms
             item {
-                val context = LocalContext.current
-                val lifecycleOwner = LocalLifecycleOwner.current
-                var testAlarmScheduled by remember { mutableStateOf(false) }
-                var canExactAlarms by remember { mutableStateOf(viewModel.canScheduleExactAlarms()) }
-                var isBatteryIgnored by remember { mutableStateOf(viewModel.isIgnoringBatteryOptimizations()) }
-
-                // Refresh permission status when returning from system Settings.
-                DisposableEffect(lifecycleOwner) {
-                    val observer = LifecycleEventObserver { _, event ->
-                        if (event == Lifecycle.Event.ON_RESUME) {
-                            canExactAlarms = viewModel.canScheduleExactAlarms()
-                            isBatteryIgnored = viewModel.isIgnoringBatteryOptimizations()
-                        }
-                    }
-                    lifecycleOwner.lifecycle.addObserver(observer)
-                    onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-                }
+                var testAlarmScheduled by rememberSaveable { mutableStateOf(false) }
 
                 SettingsSectionCard(
                     title = "Background Reliability",
@@ -738,7 +740,7 @@ fun SettingsScreen(
                                         IconButton(
                                             onClick = { viewModel.updatePrayerMinuteOffset(prayer, offset - 1) }
                                         ) {
-                                            Icon(Icons.Default.Remove, contentDescription = "Decrease minute", modifier = Modifier.size(16.dp))
+                                            Icon(Icons.Default.Remove, contentDescription = "Decrease ${prayer.displayName} offset by one minute", modifier = Modifier.size(16.dp))
                                         }
                                     }
 
@@ -758,7 +760,7 @@ fun SettingsScreen(
                                         IconButton(
                                             onClick = { viewModel.updatePrayerMinuteOffset(prayer, offset + 1) }
                                         ) {
-                                            Icon(Icons.Default.Add, contentDescription = "Increase minute", modifier = Modifier.size(16.dp))
+                                            Icon(Icons.Default.Add, contentDescription = "Increase ${prayer.displayName} offset by one minute", modifier = Modifier.size(16.dp))
                                         }
                                     }
                                 }
@@ -776,7 +778,7 @@ fun SettingsScreen(
         AlertDialog(
             onDismissRequest = {
                 if (uiState.isPlayingSound) viewModel.stopPreviewSound()
-                selectedPrayerForSound = null
+                selectedPrayerId = null
             },
             title = {
                 Column {
@@ -795,7 +797,9 @@ fun SettingsScreen(
             text = {
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 400.dp)
                 ) {
                     items(AdhanSoundType.entries) { sound ->
                         val isSelected = sound == currentSound
@@ -811,7 +815,7 @@ fun SettingsScreen(
                                 .clickable {
                                     if (uiState.isPlayingSound) viewModel.stopPreviewSound()
                                     viewModel.updatePrayerAlertSound(prayer, sound)
-                                    selectedPrayerForSound = null
+                                    selectedPrayerId = null
                                 }
                                 .testTag("sound_dialog_option_${sound.id}")
                         ) {
@@ -832,7 +836,7 @@ fun SettingsScreen(
                                         onClick = {
                                             if (uiState.isPlayingSound) viewModel.stopPreviewSound()
                                             viewModel.updatePrayerAlertSound(prayer, sound)
-                                            selectedPrayerForSound = null
+                                            selectedPrayerId = null
                                         }
                                     )
                                     Column {
@@ -857,7 +861,7 @@ fun SettingsScreen(
                                     ) {
                                         Icon(
                                             imageVector = if (isPlaying) Icons.Default.Stop else Icons.Default.GraphicEq,
-                                            contentDescription = "Test sound",
+                                            contentDescription = "Preview ${sound.title} for ${prayer.displayName}" + if (isPlaying) ", playing, tap to stop" else "",
                                             tint = if (isPlaying) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
                                         )
                                     }
@@ -871,7 +875,7 @@ fun SettingsScreen(
                 TextButton(
                     onClick = {
                         if (uiState.isPlayingSound) viewModel.stopPreviewSound()
-                        selectedPrayerForSound = null
+                        selectedPrayerId = null
                     }
                 ) {
                     Text("Done")

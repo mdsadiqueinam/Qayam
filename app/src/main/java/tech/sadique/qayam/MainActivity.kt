@@ -14,13 +14,12 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tech.sadique.qayam.ui.screens.MainPrayerScreen
 import tech.sadique.qayam.ui.screens.SettingsScreen
 import tech.sadique.qayam.ui.theme.SalahTheme
@@ -40,12 +39,13 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            val uiState by viewModel.uiState.collectAsState()
-            var currentScreen by remember { mutableStateOf(AppScreen.MAIN) }
+            val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+            var currentScreenId by rememberSaveable { mutableStateOf(AppScreen.MAIN.name) }
+            val currentScreen = AppScreen.valueOf(currentScreenId)
 
             // Handle back button on Settings screen
             BackHandler(enabled = currentScreen == AppScreen.SETTINGS) {
-                currentScreen = AppScreen.MAIN
+                currentScreenId = AppScreen.MAIN.name
             }
 
             SalahTheme(themeMode = uiState.settings.themeMode) {
@@ -67,13 +67,13 @@ class MainActivity : ComponentActivity() {
                             AppScreen.MAIN -> {
                                 MainPrayerScreen(
                                     viewModel = viewModel,
-                                    onNavigateToSettings = { currentScreen = AppScreen.SETTINGS }
+                                    onNavigateToSettings = { currentScreenId = AppScreen.SETTINGS.name }
                                 )
                             }
                             AppScreen.SETTINGS -> {
                                 SettingsScreen(
                                     viewModel = viewModel,
-                                    onNavigateBack = { currentScreen = AppScreen.MAIN }
+                                    onNavigateBack = { currentScreenId = AppScreen.MAIN.name }
                                 )
                             }
                         }

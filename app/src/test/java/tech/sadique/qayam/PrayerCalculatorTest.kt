@@ -1,5 +1,6 @@
 package tech.sadique.qayam
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import tech.sadique.qayam.data.calculator.PrayerTimeCalculator
@@ -82,6 +83,14 @@ class PrayerCalculatorTest {
         }
         assertTrue(minutes(s.fajr) < minutes(s.sunrise))
         assertTrue(s.isha.timeInMillis > s.maghrib.timeInMillis)
+    }
+
+    @Test
+    fun alertDefaults_onlySunMarkersDisabled() {
+        for (prayer in PrayerType.dailyPrayers) {
+            val expected = prayer != PrayerType.SUNRISE && prayer != PrayerType.GURUB_E_AFTAB
+            assertEquals("$prayer", expected, prayer.defaultAlertEnabled)
+        }
     }
 
     @Test

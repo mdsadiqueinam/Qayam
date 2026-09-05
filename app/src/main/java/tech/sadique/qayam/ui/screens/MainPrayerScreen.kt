@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -29,6 +30,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -60,30 +62,43 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.flow.StateFlow
 import tech.sadique.qayam.data.model.AdhanSoundType
+import tech.sadique.qayam.data.model.CurrentPrayerState
+import tech.sadique.qayam.data.model.PrayerSchedule
 import tech.sadique.qayam.data.model.PrayerType
+import tech.sadique.qayam.data.preferences.UserSettings
 import tech.sadique.qayam.ui.components.CountdownTimerView
 import tech.sadique.qayam.ui.components.MasjidHorizonCanvas
 import tech.sadique.qayam.ui.components.PrayerCard
+import tech.sadique.qayam.ui.theme.DarkPrimary
+import tech.sadique.qayam.ui.theme.GoldLight
+import tech.sadique.qayam.ui.viewmodel.PrayerTickerState
 import tech.sadique.qayam.ui.viewmodel.PrayerViewModel
 import java.text.SimpleDateFormat
-import java.util.Calendar
+import java.util.Date
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -94,9 +109,11 @@ fun MainPrayerScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val tickerFlow: StateFlow<PrayerTickerState> = viewModel.tickerState
 
-    var selectedPrayerForSoundModal by remember { mutableStateOf<PrayerType?>(null) }
+    var selectedPrayerId by rememberSaveable { mutableStateOf<String?>(null) }
+    val selectedPrayerForSoundModal = selectedPrayerId?.let { PrayerType.fromId(it) }
     val sheetState = rememberModalBottomSheetState()
 
     // Permission launchers
@@ -145,15 +162,6 @@ fun MainPrayerScreen(
         }
     }
 
-    val dateFormatter = remember { SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.getDefault()) }
-    val timeFormatter = remember(uiState.settings.is24HourFormat) {
-        if (uiState.settings.is24HourFormat) SimpleDateFormat("HH:mm:ss", Locale.getDefault())
-        else SimpleDateFormat("h:mm:ss a", Locale.getDefault())
-    }
-
-    val dateStr = dateFormatter.format(uiState.currentTimeCalendar.time)
-    val timeStr = timeFormatter.format(uiState.currentTimeCalendar.time)
-
     Scaffold(
         modifier = modifier
             .fillMaxSize()
@@ -171,6 +179,7 @@ fun MainPrayerScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp)
+                        .semantics { liveRegion = LiveRegionMode.Polite }
                         .testTag("audio_playing_banner"),
                     shape = RoundedCornerShape(20.dp),
                     color = MaterialTheme.colorScheme.primary,
@@ -228,7 +237,7 @@ fun MainPrayerScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Stop,
-                                contentDescription = "Stop",
+                                contentDescription = null,
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
@@ -260,7 +269,10 @@ fun MainPrayerScreen(
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
                         modifier = Modifier
                             .clip(RoundedCornerShape(16.dp))
-                            .clickable {
+                            .clickable(
+                                role = Role.Button,
+                                onClickLabel = "Refresh GPS location"
+                            ) {
                                 // Refresh happens in the permission callback on grant;
                                 // if already granted, refresh immediately.
                                 val granted = ContextCompat.checkSelfPermission(
@@ -347,112 +359,27 @@ fun MainPrayerScreen(
                 }
             }
 
-            // 2. Date Subtitle
+            // 2. Date Subtitle (collects only the clock flow)
             item {
-                Column(modifier = Modifier.padding(horizontal = 4.dp)) {
-                    Text(
-                        text = dateStr,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                    Text(
-                        text = "Calculation: ${uiState.settings.calculationMethod.title.substringBefore('(')}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
-                    )
-                }
+                DateSubtitleItem(
+                    tickerFlow = tickerFlow,
+                    calculationTitle = uiState.settings.calculationMethod.title.substringBefore('(')
+                )
             }
 
             // 3. Hero Animated Sun / Horizon Canvas with Mosque & Active Prayer
+            // (collects only the clock flow; static chrome above does not recompose per second)
             item {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(230.dp)
-                        .testTag("hero_horizon_card"),
-                    shape = RoundedCornerShape(28.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-                ) {
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        // Animated Canvas
-                        MasjidHorizonCanvas(
-                            state = uiState.currentState,
-                            modifier = Modifier.fillMaxSize()
-                        )
-
-                        // Top Overlay Content: Live Time & Current Prayer
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(18.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            // Current Active Prayer Pill
-                            val currentPrayer = uiState.currentState?.currentPrayer ?: PrayerType.DHUHR
-                            Surface(
-                                shape = RoundedCornerShape(16.dp),
-                                color = Color.Black.copy(alpha = 0.45f),
-                                modifier = Modifier.testTag("current_prayer_pill")
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(8.dp)
-                                            .clip(CircleShape)
-                                            .background(Color(0xFF4EE2B6))
-                                    )
-                                    Text(
-                                        text = "${currentPrayer.displayName.uppercase()} TIME",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        letterSpacing = 1.5.sp,
-                                        color = Color.White
-                                    )
-                                    Text(
-                                        text = currentPrayer.arabicName,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color(0xFFFFD56B)
-                                    )
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            // Large Digital Clock
-                            Text(
-                                text = timeStr,
-                                style = MaterialTheme.typography.headlineLarge,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = Color.White,
-                                modifier = Modifier
-                                    .shadow(elevation = 12.dp, shape = CircleShape)
-                                    .testTag("live_clock_text")
-                            )
-
-                            // Sun Elevation Tag
-                            val alt = uiState.currentState?.sunAltitudeDegrees ?: 0.0
-                            val sunStatus = if (alt > 0) String.format(Locale.US, "Sun Altitude: +%.1f° (Day)", alt)
-                            else String.format(Locale.US, "Sun Altitude: %.1f° (Night)", alt)
-                            Text(
-                                text = sunStatus,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color.White.copy(alpha = 0.85f)
-                            )
-                        }
-                    }
-                }
+                HeroItem(
+                    tickerFlow = tickerFlow,
+                    is24Hour = uiState.settings.is24HourFormat
+                )
             }
 
             // 4. Upcoming Prayer Countdown Timer Card
             item {
-                CountdownTimerView(
-                    state = uiState.currentState,
+                CountdownItem(
+                    tickerFlow = tickerFlow,
                     is24Hour = uiState.settings.is24HourFormat
                 )
             }
@@ -470,7 +397,8 @@ fun MainPrayerScreen(
                         text = "Today's Prayers",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
+                        color = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.semantics { heading() }
                     )
                     Text(
                         text = uiState.settings.juristicMethod.title.substringBefore('(').trim(),
@@ -481,34 +409,20 @@ fun MainPrayerScreen(
                 }
             }
 
-            // 6. Prayer Cards
+            // 6. Prayer Cards (highlight state comes from the clock flow only)
             val schedule = uiState.schedule
             if (schedule != null) {
-                items(PrayerType.dailyPrayers) { prayer ->
-                    val prayerCal = schedule.getTime(prayer)
-                    val isCurrent = uiState.currentState?.currentPrayer == prayer
-                    val isNext = uiState.currentState?.nextPrayer == prayer
-                    val isEnabled = uiState.settings.prayerAlertEnabled[prayer] ?: true
-                    val soundType = uiState.settings.prayerAlertSounds[prayer] ?: AdhanSoundType.MAKKAH
-                    val isPlayingThis = uiState.isPlayingSound && uiState.playingSoundType == soundType
-
-                    PrayerCard(
-                        prayer = prayer,
-                        time = prayerCal,
-                        isCurrent = isCurrent,
-                        isNext = isNext,
-                        is24Hour = uiState.settings.is24HourFormat,
-                        soundType = soundType,
-                        isEnabled = isEnabled,
-                        isPlayingThisSound = isPlayingThis,
-                        onToggleAlert = {
-                            viewModel.updatePrayerAlertEnabled(prayer, !isEnabled)
-                        },
-                        onSoundClick = {
-                            selectedPrayerForSoundModal = prayer
-                        }
-                    )
-                }
+                prayerScheduleItems(
+                    schedule = schedule,
+                    tickerFlow = tickerFlow,
+                    settings = uiState.settings,
+                    isPlayingSound = uiState.isPlayingSound,
+                    playingSoundType = uiState.playingSoundType,
+                    onToggleAlert = { prayer, enabled ->
+                        viewModel.updatePrayerAlertEnabled(prayer, enabled)
+                    },
+                    onSoundClick = { prayer -> selectedPrayerId = prayer.id }
+                )
             }
         }
     }
@@ -516,10 +430,10 @@ fun MainPrayerScreen(
     // Modal Bottom Sheet for selecting Prayer Alert Sound
     selectedPrayerForSoundModal?.let { prayer ->
         val currentSound = uiState.settings.prayerAlertSounds[prayer] ?: AdhanSoundType.MAKKAH
-        val isEnabled = uiState.settings.prayerAlertEnabled[prayer] ?: true
+        val isEnabled = uiState.settings.prayerAlertEnabled[prayer] ?: prayer.defaultAlertEnabled
 
         ModalBottomSheet(
-            onDismissRequest = { selectedPrayerForSoundModal = null },
+            onDismissRequest = { selectedPrayerId = null },
             sheetState = sheetState
         ) {
             Column(
@@ -607,7 +521,9 @@ fun MainPrayerScreen(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     LazyColumn(
-                        modifier = Modifier.weight(1f, fill = false),
+                        modifier = Modifier
+                            .weight(1f, fill = false)
+                            .heightIn(max = 360.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         items(AdhanSoundType.entries) { sound ->
@@ -665,7 +581,7 @@ fun MainPrayerScreen(
                                         ) {
                                             Icon(
                                                 imageVector = if (isPlaying) Icons.Default.Stop else Icons.Default.GraphicEq,
-                                                contentDescription = "Preview Sound",
+                                                contentDescription = "Preview ${sound.title}" + if (isPlaying) ", playing, tap to stop" else "",
                                                 tint = if (isPlaying) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
                                             )
                                         }
@@ -678,7 +594,7 @@ fun MainPrayerScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
-                    onClick = { selectedPrayerForSoundModal = null },
+                    onClick = { selectedPrayerId = null },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp)
                 ) {
@@ -687,4 +603,206 @@ fun MainPrayerScreen(
             }
         }
     }
+}
+
+/**
+ * Date subtitle. Collects only the per-second clock flow so the rest of
+ * [MainPrayerScreen] is not recomposed by the ticker.
+ */
+@Composable
+private fun DateSubtitleItem(
+    tickerFlow: StateFlow<PrayerTickerState>,
+    calculationTitle: String,
+    modifier: Modifier = Modifier
+) {
+    val ticker by tickerFlow.collectAsStateWithLifecycle()
+    val dateFormatter = remember { SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.getDefault()) }
+    Column(modifier = modifier.padding(horizontal = 4.dp)) {
+        Text(
+            text = dateFormatter.format(Date(ticker.currentTimeMillis)),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        Text(
+            text = "Calculation: $calculationTitle",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
+        )
+    }
+}
+
+/**
+ * Hero horizon card (canvas + prayer pill + live clock + sun tag).
+ * Collects only the per-second clock flow.
+ */
+@Composable
+private fun HeroItem(
+    tickerFlow: StateFlow<PrayerTickerState>,
+    is24Hour: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val ticker by tickerFlow.collectAsStateWithLifecycle()
+    val state = ticker.currentState
+    val timeFormatter = remember(is24Hour) {
+        if (is24Hour) SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+        else SimpleDateFormat("h:mm:ss a", Locale.getDefault())
+    }
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 230.dp)
+            .testTag("hero_horizon_card"),
+        shape = RoundedCornerShape(28.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            MasjidHorizonCanvas(
+                state = state,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .semantics {
+                        contentDescription =
+                            "Animated sky for ${state?.currentPrayer?.displayName ?: "loading"} prayer"
+                    }
+            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(18.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Current Active Prayer Pill (placeholder until the first tick resolves)
+                val currentPrayer = state?.currentPrayer
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = Color.Black.copy(alpha = 0.45f),
+                    modifier = Modifier.testTag("current_prayer_pill")
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(DarkPrimary)
+                        )
+                        Text(
+                            text = currentPrayer?.let { "${it.displayName.uppercase()} TIME" }
+                                ?: "LOADING PRAYER TIMES",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.5.sp,
+                            color = Color.White
+                        )
+                        currentPrayer?.let {
+                            Text(
+                                text = it.arabicName,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold,
+                                color = GoldLight
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = timeFormatter.format(Date(ticker.currentTimeMillis)),
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color.White,
+                    modifier = Modifier.testTag("live_clock_text")
+                )
+
+                val alt = state?.sunAltitudeDegrees ?: 0.0
+                val sunStatus = remember(alt) {
+                    if (alt > 0) String.format(Locale.US, "Sun Altitude: +%.1f° (Day)", alt)
+                    else String.format(Locale.US, "Sun Altitude: %.1f° (Night)", alt)
+                }
+                Text(
+                    text = sunStatus,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White.copy(alpha = 0.85f)
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Countdown card. Collects only the per-second clock flow.
+ */
+@Composable
+private fun CountdownItem(
+    tickerFlow: StateFlow<PrayerTickerState>,
+    is24Hour: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val ticker by tickerFlow.collectAsStateWithLifecycle()
+    CountdownTimerView(
+        state = ticker.currentState,
+        is24Hour = is24Hour,
+        modifier = modifier
+    )
+}
+
+/**
+ * Daily prayer cards. Highlight state comes from the per-second clock flow;
+ * static rows do not read it at the [MainPrayerScreen] root.
+ */
+private fun LazyListScope.prayerScheduleItems(
+    schedule: PrayerSchedule,
+    tickerFlow: StateFlow<PrayerTickerState>,
+    settings: UserSettings,
+    isPlayingSound: Boolean,
+    playingSoundType: AdhanSoundType?,
+    onToggleAlert: (PrayerType, Boolean) -> Unit,
+    onSoundClick: (PrayerType) -> Unit
+) {
+    items(PrayerType.dailyPrayers) { prayer ->
+        PrayerCardRow(
+            prayer = prayer,
+            schedule = schedule,
+            tickerFlow = tickerFlow,
+            settings = settings,
+            isPlayingSound = isPlayingSound,
+            playingSoundType = playingSoundType,
+            onToggleAlert = onToggleAlert,
+            onSoundClick = onSoundClick
+        )
+    }
+}
+
+@Composable
+private fun PrayerCardRow(
+    prayer: PrayerType,
+    schedule: PrayerSchedule,
+    tickerFlow: StateFlow<PrayerTickerState>,
+    settings: UserSettings,
+    isPlayingSound: Boolean,
+    playingSoundType: AdhanSoundType?,
+    onToggleAlert: (PrayerType, Boolean) -> Unit,
+    onSoundClick: (PrayerType) -> Unit
+) {
+    val ticker by tickerFlow.collectAsStateWithLifecycle()
+    val currentState: CurrentPrayerState? = ticker.currentState
+    val isEnabled = settings.prayerAlertEnabled[prayer] ?: prayer.defaultAlertEnabled
+    val soundType = settings.prayerAlertSounds[prayer] ?: AdhanSoundType.MAKKAH
+    PrayerCard(
+        prayer = prayer,
+        time = schedule.getTime(prayer),
+        isCurrent = currentState?.currentPrayer == prayer,
+        isNext = currentState?.nextPrayer == prayer,
+        is24Hour = settings.is24HourFormat,
+        soundType = soundType,
+        isEnabled = isEnabled,
+        isPlayingThisSound = isPlayingSound && playingSoundType == soundType,
+        onToggleAlert = { onToggleAlert(prayer, !isEnabled) },
+        onSoundClick = { onSoundClick(prayer) }
+    )
 }

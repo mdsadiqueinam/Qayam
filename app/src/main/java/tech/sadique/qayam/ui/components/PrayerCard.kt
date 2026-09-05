@@ -38,6 +38,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,10 +46,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import tech.sadique.qayam.data.model.AdhanSoundType
 import tech.sadique.qayam.data.model.PrayerType
+import tech.sadique.qayam.ui.theme.SalahTheme
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -67,12 +70,16 @@ fun PrayerCard(
     onSoundClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val timeFormatter = if (is24Hour) {
-        SimpleDateFormat("HH:mm", Locale.getDefault())
-    } else {
-        SimpleDateFormat("h:mm a", Locale.getDefault())
+    val timeFormatter = remember(is24Hour) {
+        if (is24Hour) {
+            SimpleDateFormat("HH:mm", Locale.getDefault())
+        } else {
+            SimpleDateFormat("h:mm a", Locale.getDefault())
+        }
     }
-    val formattedTime = timeFormatter.format(time.time)
+    val formattedTime = remember(time.timeInMillis, is24Hour) {
+        timeFormatter.format(time.time)
+    }
 
     val icon: ImageVector = when (prayer) {
         PrayerType.FAJR -> Icons.Default.WbTwilight
@@ -135,7 +142,7 @@ fun PrayerCard(
                 ) {
                     Icon(
                         imageVector = icon,
-                        contentDescription = prayer.displayName,
+                        contentDescription = null,
                         tint = if (isCurrent) MaterialTheme.colorScheme.onPrimary
                         else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(24.dp)
@@ -263,5 +270,48 @@ fun PrayerCard(
                 }
             }
         }
+    }
+}
+
+@Preview(name = "Prayer card current", showBackground = true)
+@Preview(
+    name = "Prayer card current dark",
+    showBackground = true,
+    uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+private fun PrayerCardPreview() {
+    SalahTheme {
+        PrayerCard(
+            prayer = PrayerType.FAJR,
+            time = Calendar.getInstance(),
+            isCurrent = true,
+            isNext = false,
+            is24Hour = false,
+            soundType = AdhanSoundType.MAKKAH,
+            isEnabled = true,
+            isPlayingThisSound = false,
+            onToggleAlert = {},
+            onSoundClick = {}
+        )
+    }
+}
+
+@Preview(name = "Prayer card muted", showBackground = true)
+@Composable
+private fun PrayerCardMutedPreview() {
+    SalahTheme {
+        PrayerCard(
+            prayer = PrayerType.SUNRISE,
+            time = Calendar.getInstance(),
+            isCurrent = false,
+            isNext = false,
+            is24Hour = true,
+            soundType = AdhanSoundType.SILENT,
+            isEnabled = false,
+            isPlayingThisSound = false,
+            onToggleAlert = {},
+            onSoundClick = {}
+        )
     }
 }

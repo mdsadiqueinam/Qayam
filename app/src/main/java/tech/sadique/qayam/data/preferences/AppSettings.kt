@@ -39,16 +39,7 @@ data class UserSettings(
         PrayerType.MAGHRIB to AdhanSoundType.AL_AQSA,
         PrayerType.ISHA to AdhanSoundType.MAKKAH
     ),
-    val prayerAlertEnabled: Map<PrayerType, Boolean> = mapOf(
-        PrayerType.FAJR to true,
-        PrayerType.SUNRISE to false,
-        PrayerType.ISRAQ to true,
-        PrayerType.DHUHR to true,
-        PrayerType.ASR to true,
-        PrayerType.GURUB_E_AFTAB to false,
-        PrayerType.MAGHRIB to true,
-        PrayerType.ISHA to true
-    ),
+    val prayerAlertEnabled: Map<PrayerType, Boolean> = PrayerType.dailyPrayers.associateWith { it.defaultAlertEnabled },
     val minuteOffsets: Map<PrayerType, Int> = mapOf(
         PrayerType.FAJR to 0,
         PrayerType.SUNRISE to 0,
@@ -97,8 +88,7 @@ class AppSettings(context: Context) {
         }
 
         val alertEnabled = PrayerType.dailyPrayers.associateWith { prayer ->
-            val def = prayer != PrayerType.SUNRISE && prayer != PrayerType.GURUB_E_AFTAB
-            prefs.getBoolean("enabled_${prayer.id}", def)
+            prefs.getBoolean("enabled_${prayer.id}", prayer.defaultAlertEnabled)
         }
 
         val offsets = PrayerType.dailyPrayers.associateWith { prayer ->

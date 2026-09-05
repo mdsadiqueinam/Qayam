@@ -3,6 +3,7 @@ package tech.sadique.qayam
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import tech.sadique.qayam.data.model.AdhanSoundType
+import tech.sadique.qayam.data.model.AppThemeMode
 import tech.sadique.qayam.data.model.PrayerType
 import tech.sadique.qayam.ui.components.PrayerCard
 import tech.sadique.qayam.ui.theme.SalahTheme
@@ -49,5 +50,49 @@ class GreetingScreenshotTest {
         }
 
         composeTestRule.onRoot().captureRoboImage(filePath = "src/test/screenshots/greeting.png")
+    }
+
+    @Test
+    fun prayer_card_night_mosque_screenshot() {
+        composeTestRule.setContent {
+            SalahTheme(themeMode = AppThemeMode.NIGHT_MOSQUE) {
+                PrayerCard(
+                    prayer = PrayerType.ISHA,
+                    time = Calendar.getInstance(),
+                    isCurrent = true,
+                    isNext = false,
+                    is24Hour = false,
+                    soundType = AdhanSoundType.MAKKAH,
+                    isEnabled = true,
+                    isPlayingThisSound = false,
+                    onToggleAlert = {},
+                    onSoundClick = {}
+                )
+            }
+        }
+
+        composeTestRule.onRoot().captureRoboImage(filePath = "src/test/screenshots/card_night_mosque.png")
+    }
+
+    @Test
+    fun prayer_card_muted_screenshot() {
+        composeTestRule.setContent {
+            SalahTheme(themeMode = AppThemeMode.DARK) {
+                PrayerCard(
+                    prayer = PrayerType.SUNRISE,
+                    time = Calendar.getInstance(),
+                    isCurrent = false,
+                    isNext = false,
+                    is24Hour = true,
+                    soundType = AdhanSoundType.SILENT,
+                    isEnabled = false,
+                    isPlayingThisSound = false,
+                    onToggleAlert = {},
+                    onSoundClick = {}
+                )
+            }
+        }
+
+        composeTestRule.onRoot().captureRoboImage(filePath = "src/test/screenshots/card_muted_dark.png")
     }
 }

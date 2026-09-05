@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import tech.sadique.qayam.data.model.CurrentPrayerState
 import tech.sadique.qayam.data.model.PrayerType
+import tech.sadique.qayam.ui.theme.DarkPrimary
 import tech.sadique.qayam.ui.theme.GoldAccent
 import tech.sadique.qayam.ui.theme.GoldLight
 import tech.sadique.qayam.ui.theme.SkyAsrEnd
@@ -66,20 +67,15 @@ fun MasjidHorizonCanvas(
         label = "SunGlowPulse"
     )
 
-    val starTwinkle by infiniteTransition.animateFloat(
-        initialValue = 0.3f,
-        targetValue = 1.0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1800, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "StarTwinkle"
-    )
-
     val currentPrayer = state?.currentPrayer ?: PrayerType.DHUHR
     val isDaytime = state?.isDaytime ?: true
     val progress = state?.sunProgressPercent ?: 0.5f
     val sunAltitude = state?.sunAltitudeDegrees ?: 45.0
+    val showStars = !isDaytime || currentPrayer == PrayerType.FAJR || currentPrayer == PrayerType.ISHA
+
+    // Star twinkle runs only when stars are actually drawn; otherwise the
+    // transition is not composed and the canvas is not invalidated for it.
+    val starTwinkle = starTwinkleOrStatic(showStars)
 
     val skyGradientColors = when (currentPrayer) {
         PrayerType.FAJR -> listOf(SkyFajrStart, SkyFajrMid, SkyFajrEnd)
@@ -107,7 +103,7 @@ fun MasjidHorizonCanvas(
             )
 
             // 2. Draw Stars (if night or twilight)
-            if (!isDaytime || currentPrayer == PrayerType.FAJR || currentPrayer == PrayerType.ISHA) {
+            if (showStars) {
                 drawStars(width, height * 0.7f, starTwinkle)
             }
 
@@ -286,7 +282,7 @@ private fun DrawScope.drawHorizonAndMosque(
         brush = Brush.horizontalGradient(
             colors = listOf(
                 Color.Transparent,
-                if (isDaytime) GoldLight.copy(alpha = 0.6f) else Color(0xFF4EE2B6).copy(alpha = 0.4f),
+                if (isDaytime) GoldLight.copy(alpha = 0.6f) else DarkPrimary.copy(alpha = 0.4f),
                 Color.Transparent
             )
         ),
@@ -424,4 +420,42 @@ private fun DrawScope.drawHorizonAndMosque(
         radius = 3.5.dp.toPx(),
         center = Offset(cx, domeTipY - 14.dp.toPx())
     )
+}
+
+/**
+ * Runs the star-twinkle infinite transition only while stars are visible.
+ * When hidden, no transition is composed (static full brightness, unused).
+ */
+@Composable
+private fun starTwinkleOrStatic(showStars: Boolean): Float {
+    if (!showStars) return 1f
+    val twinkleTransition = rememberInfiniteTransition(label = "StarTwinkle")
+    val twinkle by twinkleTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1800, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "StarTwinkleValue"
+    )
+    return twinkle
+}
+
+@androidx.compose.ui.tooling.preview.Preview(name = "Horizon day", showBackground = true)
+@Composable
+private fun MasjidHorizonDayPreview() {
+    tech.sadique.qayam.ui.theme.SalahTheme {
+        MasjidHorizonCanvas(state = previewPrayerState())
+    }
+}
+
+@androidx.compose.ui.tooling.preview.Preview(name = "Horizon night mosque", showBackground = true)
+@Composable
+private fun MasjidHorizonNightPreview() {
+    tech.sadique.qayam.ui.theme.SalahTheme(
+        themeMode = tech.sadique.qayam.data.model.AppThemeMode.NIGHT_MOSQUE
+    ) {
+        MasjidHorizonCanvas(state = previewPrayerState().copy(isDaytime = false))
+    }
 }

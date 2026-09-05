@@ -45,7 +45,7 @@ class AdhanAlarmReceiver : BroadcastReceiver() {
                 val prayerType = PrayerType.fromId(prayerId)
 
                 val currentSettings = appSettings.settings.value
-                val isEnabled = currentSettings.prayerAlertEnabled[prayerType] ?: true
+                val isEnabled = currentSettings.prayerAlertEnabled[prayerType] ?: prayerType.defaultAlertEnabled
 
                 if (isEnabled) {
                     val soundType = currentSettings.prayerAlertSounds[prayerType] ?: AdhanSoundType.MAKKAH

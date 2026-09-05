@@ -26,6 +26,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,7 +42,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import tech.sadique.qayam.data.model.CurrentPrayerState
-import tech.sadique.qayam.ui.theme.GoldAccent
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -47,15 +51,23 @@ fun CountdownTimerView(
     is24Hour: Boolean,
     modifier: Modifier = Modifier
 ) {
-    if (state == null) return
+    if (state == null) {
+        CountdownPlaceholder(modifier = modifier)
+        return
+    }
 
     val totalSec = state.timeRemainingMillis / 1000
-    val hours = totalSec / 3600
-    val mins = (totalSec % 3600) / 60
-    val secs = totalSec % 60
+    val (hours, mins, secs) = remember(totalSec) {
+        Triple(totalSec / 3600, (totalSec % 3600) / 60, totalSec % 60)
+    }
 
-    val timeFormat = if (is24Hour) SimpleDateFormat("HH:mm", Locale.getDefault()) else SimpleDateFormat("h:mm a", Locale.getDefault())
-    val targetTimeStr = timeFormat.format(state.nextPrayerTime.time)
+    val timeFormat = remember(is24Hour) {
+        if (is24Hour) SimpleDateFormat("HH:mm", Locale.getDefault())
+        else SimpleDateFormat("h:mm a", Locale.getDefault())
+    }
+    val targetTimeStr = remember(state.nextPrayerTime.timeInMillis, is24Hour) {
+        timeFormat.format(state.nextPrayerTime.time)
+    }
 
     Surface(
         modifier = modifier
@@ -139,13 +151,26 @@ fun CountdownTimerView(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Large Digital Countdown
+            // Large Digital Countdown (hours/minutes animate on change;
+            // seconds tick every second, so no enter/exit animation there).
+            // Aggregated live-region description so TalkBack announces
+            // "Maghrib in 2 hours 15 minutes" instead of six separate digits.
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.testTag("countdown_timer_digits")
+                modifier = Modifier
+                    .semantics(mergeDescendants = true) {
+                        liveRegion = LiveRegionMode.Polite
+                        contentDescription =
+                            "${state.nextPrayer.displayName} in $hours hours $mins minutes"
+                    }
+                    .testTag("countdown_timer_digits")
             ) {
-                TimeUnitBlock(value = String.format(Locale.US, "%02d", hours), label = "HOURS")
+                TimeUnitBlock(
+                    value = remember(hours) { String.format(Locale.US, "%02d", hours) },
+                    label = "HOURS",
+                    animate = true
+                )
                 Text(
                     text = ":",
                     style = MaterialTheme.typography.headlineLarge,
@@ -153,7 +178,11 @@ fun CountdownTimerView(
                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
                     color = MaterialTheme.colorScheme.primary
                 )
-                TimeUnitBlock(value = String.format(Locale.US, "%02d", mins), label = "MINUTES")
+                TimeUnitBlock(
+                    value = remember(mins) { String.format(Locale.US, "%02d", mins) },
+                    label = "MINUTES",
+                    animate = true
+                )
                 Text(
                     text = ":",
                     style = MaterialTheme.typography.headlineLarge,
@@ -161,7 +190,11 @@ fun CountdownTimerView(
                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
                     color = MaterialTheme.colorScheme.primary
                 )
-                TimeUnitBlock(value = String.format(Locale.US, "%02d", secs), label = "SECONDS")
+                TimeUnitBlock(
+                    value = remember(secs) { String.format(Locale.US, "%02d", secs) },
+                    label = "SECONDS",
+                    animate = false
+                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -203,6 +236,7 @@ fun CountdownTimerView(
 private fun TimeUnitBlock(
     value: String,
     label: String,
+    animate: Boolean,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -220,18 +254,16 @@ private fun TimeUnitBlock(
                     .padding(vertical = 8.dp),
                 contentAlignment = Alignment.Center
             ) {
-                AnimatedContent(
-                    targetState = value,
-                    transitionSpec = { fadeIn() togetherWith fadeOut() },
-                    label = "DigitAnim"
-                ) { digit ->
-                    Text(
-                        text = digit,
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = FontFamily.Monospace,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                if (animate) {
+                    AnimatedContent(
+                        targetState = value,
+                        transitionSpec = { fadeIn() togetherWith fadeOut() },
+                        label = "DigitAnim"
+                    ) { digit ->
+                        DigitText(digit)
+                    }
+                } else {
+                    DigitText(value)
                 }
             }
         }
@@ -244,5 +276,79 @@ private fun TimeUnitBlock(
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+    }
+}
+
+@Composable
+private fun DigitText(digit: String) {
+    Text(
+        text = digit,
+        style = MaterialTheme.typography.headlineMedium,
+        fontWeight = FontWeight.Bold,
+        fontFamily = FontFamily.Monospace,
+        color = MaterialTheme.colorScheme.onSurface
+    )
+}
+
+/** Static skeleton shown while the prayer state is still loading. */
+@Composable
+private fun CountdownPlaceholder(modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag("countdown_placeholder"),
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+        tonalElevation = 4.dp,
+        shadowElevation = 8.dp
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(20.dp)
+        ) {
+            TimeUnitBlock(value = "--", label = "HOURS", animate = false)
+            Text(
+                text = ":",
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Light,
+                modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
+                color = MaterialTheme.colorScheme.primary
+            )
+            TimeUnitBlock(value = "--", label = "MINUTES", animate = false)
+            Text(
+                text = ":",
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Light,
+                modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
+                color = MaterialTheme.colorScheme.primary
+            )
+            TimeUnitBlock(value = "--", label = "SECONDS", animate = false)
+        }
+    }
+}
+
+/** Shared fake state for Compose previews of time-dependent components. */
+internal fun previewPrayerState(): tech.sadique.qayam.data.model.CurrentPrayerState {
+    val now = java.util.Calendar.getInstance()
+    val next = (now.clone() as java.util.Calendar).apply { add(java.util.Calendar.HOUR_OF_DAY, 2) }
+    return tech.sadique.qayam.data.model.CurrentPrayerState(
+        currentPrayer = tech.sadique.qayam.data.model.PrayerType.DHUHR,
+        nextPrayer = tech.sadique.qayam.data.model.PrayerType.ASR,
+        nextPrayerTime = next,
+        timeRemainingMillis = 2 * 3600_000L + 15 * 60_000L,
+        totalWindowDurationMillis = 4 * 3600_000L,
+        progressInWindow = 0.5f,
+        sunAltitudeDegrees = 32.5,
+        sunProgressPercent = 0.6f,
+        isDaytime = true
+    )
+}
+
+@androidx.compose.ui.tooling.preview.Preview(name = "Countdown", showBackground = true)
+@Composable
+private fun CountdownTimerPreview() {
+    tech.sadique.qayam.ui.theme.SalahTheme {
+        CountdownTimerView(state = previewPrayerState(), is24Hour = false)
     }
 }
