@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -49,6 +50,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -57,6 +59,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -80,6 +93,7 @@ fun SettingsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val settings = uiState.settings
+    var selectedPrayerForSound by remember { mutableStateOf<PrayerType?>(null) }
 
     Scaffold(
         modifier = modifier
@@ -350,51 +364,90 @@ fun SettingsScreen(
                         }
 
                         Text(
-                            text = "Custom Sound per Prayer:",
+                            text = "Prayer Notifications & Sounds:",
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.SemiBold
                         )
+                        Text(
+                            text = "Turn notifications on or off for each prayer time, or tap to customize the alert sound / vibration.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
 
-                        PrayerType.obligatories.forEach { prayer ->
+                        PrayerType.dailyPrayers.forEach { prayer ->
+                            val isEnabled = settings.prayerAlertEnabled[prayer] ?: (prayer != PrayerType.SUNRISE && prayer != PrayerType.GURUB_E_AFTAB)
                             val sound = settings.prayerAlertSounds[prayer] ?: AdhanSoundType.MAKKAH
                             val isPlayingThis = uiState.isPlayingSound && uiState.playingSoundType == sound
 
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                                modifier = Modifier.fillMaxWidth()
+                                color = if (isEnabled) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable(enabled = isEnabled) {
+                                        selectedPrayerForSound = prayer
+                                    }
+                                    .testTag("prayer_settings_card_${prayer.id}")
                             ) {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                                        .padding(horizontal = 14.dp, vertical = 10.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Column {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Text(
+                                                text = prayer.displayName,
+                                                style = MaterialTheme.typography.titleSmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (isEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                            )
+                                            if (prayer.subtitle != null) {
+                                                Text(
+                                                    text = "(${prayer.subtitle})",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                                )
+                                            }
+                                        }
                                         Text(
-                                            text = prayer.displayName,
-                                            style = MaterialTheme.typography.titleSmall,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        Text(
-                                            text = sound.title,
+                                            text = if (isEnabled) sound.title else "Notification Disabled",
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.primary
+                                            color = if (isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                                         )
                                     }
 
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        IconButton(
-                                            onClick = { viewModel.playPreviewSound(sound) },
-                                            modifier = Modifier.testTag("preview_btn_${prayer.id}")
-                                        ) {
-                                            Icon(
-                                                imageVector = if (isPlayingThis) Icons.Default.Stop else Icons.Default.GraphicEq,
-                                                contentDescription = "Test sound",
-                                                tint = if (isPlayingThis) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
-                                            )
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        if (isEnabled && sound != AdhanSoundType.SILENT && sound != AdhanSoundType.VIBRATE_ONLY) {
+                                            IconButton(
+                                                onClick = { viewModel.playPreviewSound(sound) },
+                                                modifier = Modifier.testTag("preview_btn_${prayer.id}")
+                                            ) {
+                                                Icon(
+                                                    imageVector = if (isPlayingThis) Icons.Default.Stop else Icons.Default.GraphicEq,
+                                                    contentDescription = "Test sound",
+                                                    tint = if (isPlayingThis) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                                                )
+                                            }
                                         }
+
+                                        Switch(
+                                            checked = isEnabled,
+                                            onCheckedChange = { checked ->
+                                                viewModel.updatePrayerAlertEnabled(prayer, checked)
+                                            },
+                                            modifier = Modifier.testTag("switch_prayer_alert_${prayer.id}")
+                                        )
                                     }
                                 }
                             }
@@ -403,7 +456,168 @@ fun SettingsScreen(
                 }
             }
 
-            // 5. Offline & Location Settings
+            // 5. Background Reliability & Exact Alarms
+            item {
+                val context = LocalContext.current
+                var testAlarmScheduled by remember { mutableStateOf(false) }
+                val canExactAlarms = remember { viewModel.canScheduleExactAlarms() }
+                val isBatteryIgnored = remember { viewModel.isIgnoringBatteryOptimizations() }
+
+                SettingsSectionCard(
+                    title = "Background Reliability",
+                    icon = Icons.Default.NotificationsActive
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text(
+                            text = "Ensure prayer notifications and Adhan audio fire precisely on time even when the screen is locked.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        // Exact Alarm Permission
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "Exact Alarm Permission",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = if (canExactAlarms) "Granted (Alarms trigger exactly on time)"
+                                            else "Denied (Alerts may be delayed by Android)",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = if (canExactAlarms) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                                        )
+                                    }
+                                    Icon(
+                                        imageVector = if (canExactAlarms) Icons.Default.Check else Icons.Default.Warning,
+                                        contentDescription = null,
+                                        tint = if (canExactAlarms) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                                    )
+                                }
+
+                                if (!canExactAlarms && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                    OutlinedButton(
+                                        onClick = {
+                                            val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                                                data = Uri.parse("package:${context.packageName}")
+                                            }
+                                            context.startActivity(intent)
+                                        },
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text("Grant Exact Alarm Permission")
+                                    }
+                                }
+                            }
+                        }
+
+                        // Battery Optimization
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "Battery Optimization",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = if (isBatteryIgnored) "Unrestricted (Recommended)"
+                                            else "Optimized (OS may throttle background alarms)",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = if (isBatteryIgnored) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                                        )
+                                    }
+                                    Icon(
+                                        imageVector = if (isBatteryIgnored) Icons.Default.Check else Icons.Default.Warning,
+                                        contentDescription = null,
+                                        tint = if (isBatteryIgnored) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                                    )
+                                }
+
+                                if (!isBatteryIgnored && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                                    OutlinedButton(
+                                        onClick = {
+                                            try {
+                                                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                                                    data = Uri.parse("package:${context.packageName}")
+                                                }
+                                                context.startActivity(intent)
+                                            } catch (e: Exception) {
+                                                val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                                                context.startActivity(intent)
+                                            }
+                                        },
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text("Set Battery to Unrestricted")
+                                    }
+                                }
+                            }
+                        }
+
+                        // Test Alarm
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(
+                                    text = "Test Background Alert (10 Seconds)",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Tap to schedule a test alert in 10 seconds, then lock your device or leave the app to test background wakeup.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+
+                                Button(
+                                    onClick = {
+                                        viewModel.scheduleTestAlarm(10)
+                                        testAlarmScheduled = true
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(if (testAlarmScheduled) "Test Alert Scheduled (Fires in 10s)" else "Schedule 10s Test Alert")
+                                }
+
+                                if (testAlarmScheduled) {
+                                    Text(
+                                        text = "✓ Scheduled! Lock your device now to verify.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 6. Offline & Location Settings
             item {
                 SettingsSectionCard(
                     title = "Location & Offline Presets",
@@ -540,6 +754,116 @@ fun SettingsScreen(
                 }
             }
         }
+    }
+
+    // Modal Alert Dialog for selecting Prayer Alert Sound
+    selectedPrayerForSound?.let { prayer ->
+        val currentSound = settings.prayerAlertSounds[prayer] ?: AdhanSoundType.MAKKAH
+        AlertDialog(
+            onDismissRequest = {
+                if (uiState.isPlayingSound) viewModel.stopPreviewSound()
+                selectedPrayerForSound = null
+            },
+            title = {
+                Column {
+                    Text(
+                        text = "${prayer.displayName} Alert Sound",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Choose notification sound or vibration mode",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            text = {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    items(AdhanSoundType.entries) { sound ->
+                        val isSelected = sound == currentSound
+                        val isPlaying = uiState.isPlayingSound && uiState.playingSoundType == sound
+
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable {
+                                    if (uiState.isPlayingSound) viewModel.stopPreviewSound()
+                                    viewModel.updatePrayerAlertSound(prayer, sound)
+                                    selectedPrayerForSound = null
+                                }
+                                .testTag("sound_dialog_option_${sound.id}")
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    modifier = Modifier.weight(1f),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    RadioButton(
+                                        selected = isSelected,
+                                        onClick = {
+                                            if (uiState.isPlayingSound) viewModel.stopPreviewSound()
+                                            viewModel.updatePrayerAlertSound(prayer, sound)
+                                            selectedPrayerForSound = null
+                                        }
+                                    )
+                                    Column {
+                                        Text(
+                                            text = sound.title,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+                                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = sound.description,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+
+                                if (sound != AdhanSoundType.SILENT && sound != AdhanSoundType.VIBRATE_ONLY) {
+                                    IconButton(
+                                        onClick = { viewModel.playPreviewSound(sound) },
+                                        modifier = Modifier.testTag("preview_dialog_${sound.id}")
+                                    ) {
+                                        Icon(
+                                            imageVector = if (isPlaying) Icons.Default.Stop else Icons.Default.GraphicEq,
+                                            contentDescription = "Test sound",
+                                            tint = if (isPlaying) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (uiState.isPlayingSound) viewModel.stopPreviewSound()
+                        selectedPrayerForSound = null
+                    }
+                ) {
+                    Text("Done")
+                }
+            }
+        )
     }
 }
 

@@ -211,6 +211,24 @@ class PrayerViewModel(application: Application) : AndroidViewModel(application) 
         AdhanAudioSynthesizer.stopSound()
     }
 
+    fun canScheduleExactAlarms(): Boolean {
+        return notificationManager.canScheduleExactAlarms()
+    }
+
+    fun isIgnoringBatteryOptimizations(): Boolean {
+        return notificationManager.isIgnoringBatteryOptimizations()
+    }
+
+    fun scheduleTestAlarm(delaySeconds: Int = 10) {
+        val nextPrayer = _uiState.value.currentState?.nextPrayer ?: PrayerType.FAJR
+        val soundType = _uiState.value.settings.prayerAlertSounds[nextPrayer] ?: AdhanSoundType.TAKBEER_ONLY
+        notificationManager.scheduleTestAlarm(
+            delaySeconds = delaySeconds,
+            prayerType = nextPrayer,
+            soundType = soundType
+        )
+    }
+
     override fun onCleared() {
         super.onCleared()
         tickerJob?.cancel()

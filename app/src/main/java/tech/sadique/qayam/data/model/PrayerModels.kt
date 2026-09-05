@@ -10,11 +10,11 @@ enum class PrayerType(
     val subtitle: String? = null
 ) {
     FAJR("fajr", "Fajr", "الفجر", true),
-    SUNRISE("sunrise", "Sunrise", "شُرُوق الشَّمْس", false, "Sunrise"),
+    SUNRISE("sunrise", "Sunrise", "شُرُوق الشَّمْس", false),
     ISRAQ("israq", "Israq", "الإشراق", false),
     DHUHR("dhuhr", "Dhuhr", "الظهر", true),
     ASR("asr", "Asr", "العصر", true),
-    GURUB_E_AFTAB("sunset", "Sunset", "غُروب الشَّمْس", false, "Sunset"),
+    GURUB_E_AFTAB("sunset", "Sunset", "غُروب الشَّمْس", false),
     MAGHRIB("maghrib", "Maghrib", "المغرب", true),
     ISHA("isha", "Isha", "العشاء", true);
 

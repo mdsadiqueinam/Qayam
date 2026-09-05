@@ -2,11 +2,13 @@ package tech.sadique.qayam.notification
 
 import android.annotation.SuppressLint
 import android.app.AlarmManager
+import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.PowerManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.getSystemService
@@ -35,11 +37,15 @@ class AdhanNotificationManager(private val context: Context) {
         const val EXTRA_PRAYER_ID = "extra_prayer_id"
     }
 
-    fun showPrayerNotification(prayerType: PrayerType, soundType: AdhanSoundType, highPriority: Boolean) {
-        val channelId = if (soundType == AdhanSoundType.SILENT) {
-            SalahApp.ADHAN_SILENT_CHANNEL_ID
-        } else {
-            SalahApp.ADHAN_CHANNEL_ID
+    fun buildPrayerNotification(
+        prayerType: PrayerType,
+        soundType: AdhanSoundType,
+        highPriority: Boolean
+    ): Notification {
+        val channelId = when (soundType) {
+            AdhanSoundType.SILENT -> SalahApp.ADHAN_SILENT_CHANNEL_ID
+            AdhanSoundType.VIBRATE_ONLY -> SalahApp.ADHAN_VIBRATE_CHANNEL_ID
+            else -> SalahApp.ADHAN_CHANNEL_ID
         }
 
         val openAppIntent = Intent(context, MainActivity::class.java).apply {
@@ -96,21 +102,16 @@ class AdhanNotificationManager(private val context: Context) {
             )
         }
 
-        if (soundType == AdhanSoundType.VIBRATE_ONLY || soundType != AdhanSoundType.SILENT) {
+        if (soundType != AdhanSoundType.SILENT) {
             builder.setVibrate(longArrayOf(0, 600, 300, 600, 300, 1200))
         }
 
-        notificationManager?.notify(NOTIFICATION_ID_BASE + prayerType.ordinal, builder.build())
+        return builder.build()
+    }
 
-        // Play the synthesized or system Adhan audio
-        if (soundType != AdhanSoundType.SILENT && soundType != AdhanSoundType.VIBRATE_ONLY) {
-            AdhanAudioSynthesizer.playSound(
-                context = context,
-                soundType = soundType,
-                highPriorityAlarm = highPriority,
-                volume = 1.0f
-            )
-        }
+    fun showPrayerNotification(prayerType: PrayerType, soundType: AdhanSoundType, highPriority: Boolean) {
+        val notification = buildPrayerNotification(prayerType, soundType, highPriority)
+        notificationManager?.notify(NOTIFICATION_ID_BASE + prayerType.ordinal, notification)
     }
 
     fun dismissPrayerNotification(prayerType: PrayerType) {
@@ -175,7 +176,7 @@ class AdhanNotificationManager(private val context: Context) {
     }
 
     @SuppressLint("ScheduleExactAlarm")
-    private fun setExactAlarm(
+    fun setExactAlarm(
         prayer: PrayerType,
         triggerTimeMillis: Long,
         soundType: AdhanSoundType,
@@ -188,6 +189,7 @@ class AdhanNotificationManager(private val context: Context) {
             putExtra(EXTRA_PRAYER_ID, prayer.id)
             putExtra("extra_sound_type", soundType.id)
             putExtra("extra_high_priority", highPriority)
+            addFlags(Intent.FLAG_RECEIVER_FOREGROUND)
         }
 
         val pendingIntent = PendingIntent.getBroadcast(
@@ -197,24 +199,104 @@ class AdhanNotificationManager(private val context: Context) {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                alarmManager.setExactAndAllowWhileIdle(
-                    AlarmManager.RTC_WAKEUP,
-                    triggerTimeMillis,
-                    pendingIntent
-                )
-            } else {
-                alarmManager.setExact(
-                    AlarmManager.RTC_WAKEUP,
-                    triggerTimeMillis,
-                    pendingIntent
-                )
-            }
-            Log.d("AdhanAlarm", "Alarm scheduled for ${prayer.displayName} at $triggerTimeMillis")
-        } catch (e: SecurityException) {
-            Log.w("AdhanAlarm", "Exact alarm permission denied", e)
+        val openAppIntent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra(EXTRA_PRAYER_ID, prayer.id)
         }
+        val openAppPendingIntent = PendingIntent.getActivity(
+            context,
+            prayer.ordinal,
+            openAppIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val canExact = canScheduleExactAlarms()
+
+        try {
+            if (canExact) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    val alarmClockInfo = AlarmManager.AlarmClockInfo(triggerTimeMillis, openAppPendingIntent)
+                    alarmManager.setAlarmClock(alarmClockInfo, pendingIntent)
+                } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    alarmManager.setExactAndAllowWhileIdle(
+                        AlarmManager.RTC_WAKEUP,
+                        triggerTimeMillis,
+                        pendingIntent
+                    )
+                } else {
+                    alarmManager.setExact(
+                        AlarmManager.RTC_WAKEUP,
+                        triggerTimeMillis,
+                        pendingIntent
+                    )
+                }
+            } else {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    alarmManager.setAndAllowWhileIdle(
+                        AlarmManager.RTC_WAKEUP,
+                        triggerTimeMillis,
+                        pendingIntent
+                    )
+                } else {
+                    alarmManager.set(
+                        AlarmManager.RTC_WAKEUP,
+                        triggerTimeMillis,
+                        pendingIntent
+                    )
+                }
+            }
+            Log.d("AdhanAlarm", "Alarm scheduled for ${prayer.displayName} at $triggerTimeMillis (exact: $canExact)")
+        } catch (e: SecurityException) {
+            Log.w("AdhanAlarm", "Exact alarm permission denied, falling back to inexact alarm", e)
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    alarmManager.setAndAllowWhileIdle(
+                        AlarmManager.RTC_WAKEUP,
+                        triggerTimeMillis,
+                        pendingIntent
+                    )
+                } else {
+                    alarmManager.set(
+                        AlarmManager.RTC_WAKEUP,
+                        triggerTimeMillis,
+                        pendingIntent
+                    )
+                }
+            } catch (fallbackEx: Exception) {
+                Log.e("AdhanAlarm", "Failed to schedule fallback alarm", fallbackEx)
+            }
+        }
+    }
+
+    fun canScheduleExactAlarms(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            alarmManager?.canScheduleExactAlarms() ?: false
+        } else {
+            true
+        }
+    }
+
+    fun isIgnoringBatteryOptimizations(): Boolean {
+        val powerManager = context.getSystemService<PowerManager>() ?: return true
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            powerManager.isIgnoringBatteryOptimizations(context.packageName)
+        } else {
+            true
+        }
+    }
+
+    fun scheduleTestAlarm(
+        delaySeconds: Int = 10,
+        prayerType: PrayerType = PrayerType.FAJR,
+        soundType: AdhanSoundType = AdhanSoundType.TAKBEER_ONLY
+    ) {
+        val triggerMillis = System.currentTimeMillis() + (delaySeconds * 1000L)
+        setExactAlarm(
+            prayer = prayerType,
+            triggerTimeMillis = triggerMillis,
+            soundType = soundType,
+            highPriority = true
+        )
     }
 
     private fun cancelAlarm(prayer: PrayerType) {

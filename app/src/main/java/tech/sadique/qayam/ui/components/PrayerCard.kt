@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Brightness6
 import androidx.compose.material.icons.filled.Brightness7
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.WbTwilight
@@ -225,16 +226,24 @@ fun PrayerCard(
 
                 // Alert Button
                 val alertIcon = when {
-                    !isEnabled || soundType == AdhanSoundType.SILENT -> Icons.Default.NotificationsOff
+                    !isEnabled -> Icons.Default.NotificationsOff
+                    soundType == AdhanSoundType.SILENT -> Icons.Default.NotificationsNone
                     soundType == AdhanSoundType.VIBRATE_ONLY -> Icons.Default.Vibration
                     isPlayingThisSound -> Icons.Default.GraphicEq
                     else -> Icons.Default.NotificationsActive
                 }
 
+                val alertDescription = when {
+                    !isEnabled -> "${prayer.displayName} alert: Muted (No notification)"
+                    soundType == AdhanSoundType.SILENT -> "${prayer.displayName} alert: Visual only (Silent notification)"
+                    soundType == AdhanSoundType.VIBRATE_ONLY -> "${prayer.displayName} alert: Vibrate only"
+                    else -> "${prayer.displayName} alert: ${soundType.title}"
+                }
+
                 Surface(
                     shape = CircleShape,
                     color = if (isPlayingThisSound) MaterialTheme.colorScheme.secondary
-                    else if (isEnabled && soundType != AdhanSoundType.SILENT) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+                    else if (isEnabled) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
                     else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                     modifier = Modifier.size(38.dp)
                 ) {
@@ -244,9 +253,9 @@ fun PrayerCard(
                     ) {
                         Icon(
                             imageVector = alertIcon,
-                            contentDescription = "Alert setting for ${prayer.displayName}",
+                            contentDescription = alertDescription,
                             tint = if (isPlayingThisSound) MaterialTheme.colorScheme.onSecondary
-                            else if (isEnabled && soundType != AdhanSoundType.SILENT) MaterialTheme.colorScheme.primary
+                            else if (isEnabled) MaterialTheme.colorScheme.primary
                             else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                             modifier = Modifier.size(18.dp)
                         )

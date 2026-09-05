@@ -8,6 +8,7 @@ import tech.sadique.qayam.data.model.HighLatitudeRule
 import tech.sadique.qayam.data.model.JuristicMethod
 import tech.sadique.qayam.data.model.PrayerType
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -68,11 +69,68 @@ class ExampleRobolectricTest {
         // Isha should be after Maghrib
         assertTrue(schedule.isha.timeInMillis > schedule.maghrib.timeInMillis)
 
-        // Check Islamic naming
-        assertEquals("Shurūq Ash-Shams", PrayerType.SUNRISE.displayName)
+        // Check naming
+        assertEquals("Sunrise", PrayerType.SUNRISE.displayName)
         assertEquals("شُرُوق الشَّمْس", PrayerType.SUNRISE.arabicName)
         assertEquals("Israq", PrayerType.ISRAQ.displayName)
-        assertEquals("Ghurūb Ash-Shams", PrayerType.GURUB_E_AFTAB.displayName)
+        assertEquals("Sunset", PrayerType.GURUB_E_AFTAB.displayName)
         assertEquals("غُروب الشَّمْس", PrayerType.GURUB_E_AFTAB.arabicName)
+    }
+
+    @Test
+    fun `test build prayer notification for audible adhan uses primary channel and has stop action`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val notificationManager = tech.sadique.qayam.notification.AdhanNotificationManager(context)
+        val notification = notificationManager.buildPrayerNotification(
+            prayerType = PrayerType.FAJR,
+            soundType = tech.sadique.qayam.data.model.AdhanSoundType.MAKKAH,
+            highPriority = true
+        )
+
+        assertNotNull(notification)
+        assertEquals(SalahApp.ADHAN_CHANNEL_ID, notification.channelId)
+        assertEquals(android.R.drawable.ic_lock_idle_alarm, notification.smallIcon.resId)
+        assertNotNull(notification.actions)
+        assertTrue(notification.actions.any { it.title.toString().contains("Stop Adhan") })
+    }
+
+    @Test
+    fun `test build prayer notification for SILENT uses silent channel and has no stop action`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val notificationManager = tech.sadique.qayam.notification.AdhanNotificationManager(context)
+        val notification = notificationManager.buildPrayerNotification(
+            prayerType = PrayerType.DHUHR,
+            soundType = tech.sadique.qayam.data.model.AdhanSoundType.SILENT,
+            highPriority = true
+        )
+
+        assertNotNull(notification)
+        assertEquals(SalahApp.ADHAN_SILENT_CHANNEL_ID, notification.channelId)
+        val hasStopAction = notification.actions?.any { it.title.toString().contains("Stop Adhan") } ?: false
+        assertFalse(hasStopAction)
+    }
+
+    @Test
+    fun `test build prayer notification for VIBRATE_ONLY uses vibrate channel and has no stop action`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val notificationManager = tech.sadique.qayam.notification.AdhanNotificationManager(context)
+        val notification = notificationManager.buildPrayerNotification(
+            prayerType = PrayerType.ASR,
+            soundType = tech.sadique.qayam.data.model.AdhanSoundType.VIBRATE_ONLY,
+            highPriority = true
+        )
+
+        assertNotNull(notification)
+        assertEquals(SalahApp.ADHAN_VIBRATE_CHANNEL_ID, notification.channelId)
+        val hasStopAction = notification.actions?.any { it.title.toString().contains("Stop Adhan") } ?: false
+        assertFalse(hasStopAction)
+    }
+
+    @Test
+    fun `test boot receiver can receive boot intent without error`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val bootReceiver = tech.sadique.qayam.receiver.BootReceiver()
+        val intent = android.content.Intent(android.content.Intent.ACTION_BOOT_COMPLETED)
+        bootReceiver.onReceive(context, intent)
     }
 }
