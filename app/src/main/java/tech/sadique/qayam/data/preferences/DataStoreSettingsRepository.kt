@@ -23,13 +23,13 @@ import javax.inject.Singleton
 
 private val Context.qayamDataStore by preferencesDataStore(
     name = "qayam_prefs",
-    corruptionHandler = ReplaceFileCorruptionHandler { emptyPreferences() }
+    corruptionHandler = ReplaceFileCorruptionHandler { emptyPreferences() },
 )
 
 @Singleton
-open class DataStoreSettingsRepository @Inject constructor(
-    @ApplicationContext private val context: Context
-) : SettingsRepository {
+@Suppress("TooManyFunctions")
+open class DataStoreSettingsRepository @Inject constructor(@ApplicationContext private val context: Context) :
+    SettingsRepository {
 
     override val settings: Flow<UserSettings> = context.qayamDataStore.data
         .catch { e ->
@@ -37,13 +37,12 @@ open class DataStoreSettingsRepository @Inject constructor(
         }
         .map { it.toUserSettings() }
 
-    override suspend fun snapshot(): UserSettings =
-        context.qayamDataStore.data
-            .catch { e ->
-                if (e is IOException) emit(emptyPreferences()) else throw e
-            }
-            .map { it.toUserSettings() }
-            .first()
+    override suspend fun snapshot(): UserSettings = context.qayamDataStore.data
+        .catch { e ->
+            if (e is IOException) emit(emptyPreferences()) else throw e
+        }
+        .map { it.toUserSettings() }
+        .first()
 
     /** Clears the store back to defaults (used by tests; future Settings reset action). */
     internal suspend fun resetToDefaults() {

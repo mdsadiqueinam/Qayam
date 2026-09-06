@@ -1,11 +1,11 @@
+@file:Suppress("FunctionNaming")
+
 package tech.sadique.qayam.ui.screens.main
 
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import kotlinx.coroutines.flow.StateFlow
 import tech.sadique.qayam.data.model.AdhanSoundType
 import tech.sadique.qayam.data.model.CurrentPrayerState
 import tech.sadique.qayam.data.model.PrayerSchedule
@@ -21,7 +21,7 @@ fun LazyListScope.prayerScheduleItems(
     isPlayingSound: Boolean,
     playingSoundType: AdhanSoundType?,
     onToggleAlert: (PrayerType, Boolean) -> Unit,
-    onSoundClick: (PrayerType) -> Unit
+    onSoundClick: (PrayerType) -> Unit,
 ) {
     items(PrayerType.dailyPrayers) { prayer ->
         val isEnabled = settings.prayerAlertEnabled[prayer] ?: prayer.defaultAlertEnabled
@@ -35,7 +35,7 @@ fun LazyListScope.prayerScheduleItems(
             isEnabled = isEnabled,
             isPlayingThisSound = isPlayingSound && playingSoundType == soundType,
             onToggleAlert = { onToggleAlert(prayer, !isEnabled) },
-            onSoundClick = { onSoundClick(prayer) }
+            onSoundClick = { onSoundClick(prayer) },
         )
     }
 }
@@ -50,7 +50,7 @@ fun PrayerCardRow(
     isEnabled: Boolean,
     isPlayingThisSound: Boolean,
     onToggleAlert: () -> Unit,
-    onSoundClick: () -> Unit
+    onSoundClick: () -> Unit,
 ) {
     PrayerCard(
         prayer = prayer,
@@ -62,6 +62,6 @@ fun PrayerCardRow(
         isEnabled = isEnabled,
         isPlayingThisSound = isPlayingThisSound,
         onToggleAlert = onToggleAlert,
-        onSoundClick = onSoundClick
+        onSoundClick = onSoundClick,
     )
 }

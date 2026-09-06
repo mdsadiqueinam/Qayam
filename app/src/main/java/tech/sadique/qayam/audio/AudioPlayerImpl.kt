@@ -23,7 +23,7 @@ class AudioPlayerImpl @Inject constructor(
     private val ringtonePlayer: RingtonePlayer,
     private val synthPlayer: SynthPlayer,
     private val melodyRepository: MelodyRepository,
-    @ApplicationScope private val externalScope: CoroutineScope
+    @ApplicationScope private val externalScope: CoroutineScope,
 ) : AudioPlayer {
 
     constructor(@ApplicationContext context: Context) : this(
@@ -31,7 +31,7 @@ class AudioPlayerImpl @Inject constructor(
         ringtonePlayer = RingtonePlayer(context, CoroutineScope(SupervisorJob() + Dispatchers.Default)),
         synthPlayer = SynthPlayer(),
         melodyRepository = MelodyRepository(),
-        externalScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        externalScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
     )
 
     private companion object {
@@ -46,11 +46,12 @@ class AudioPlayerImpl @Inject constructor(
     private val _currentlyPlayingSound = MutableStateFlow<AdhanSoundType?>(null)
     override val currentlyPlayingSound: StateFlow<AdhanSoundType?> = _currentlyPlayingSound.asStateFlow()
 
+    @Suppress("TooGenericExceptionCaught")
     override fun playSound(
         soundType: AdhanSoundType,
         highPriority: Boolean,
         volume: Float,
-        onComplete: (() -> Unit)?
+        onComplete: (() -> Unit)?,
     ) {
         stopSound()
 

@@ -1,3 +1,5 @@
+@file:Suppress("FunctionNaming", "LongMethod")
+
 package tech.sadique.qayam.ui.screens.settings
 
 import android.os.Build
@@ -27,6 +29,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
+private const val TEST_ALARM_DELAY_SECONDS = 10
+
 @Composable
 fun BackgroundReliabilitySection(
     canExactAlarms: Boolean,
@@ -34,58 +38,70 @@ fun BackgroundReliabilitySection(
     onScheduleTestAlarm: (Int) -> Unit,
     onOpenExactAlarmSettings: () -> Unit,
     onOpenBatterySettings: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     var testAlarmScheduled by rememberSaveable { mutableStateOf(false) }
 
     SettingsSectionCard(
         title = "Background Reliability",
         icon = Icons.Default.NotificationsActive,
-        modifier = modifier
+        modifier = modifier,
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(
-                text = "Ensure prayer notifications and Adhan audio fire precisely on time even when the screen is locked.",
+                text = "Ensure prayer notifications and Adhan audio fire precisely on time even when the" +
+                    " screen is locked.",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
             // Exact Alarm Permission
             Surface(
                 shape = RoundedCornerShape(12.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = "Exact Alarm Permission",
                                 style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
                             )
                             Text(
-                                text = if (canExactAlarms) "Granted (Alarms trigger exactly on time)"
-                                else "Denied (Alerts may be delayed by Android)",
+                                text = if (canExactAlarms) {
+                                    "Granted (Alarms trigger exactly on time)"
+                                } else {
+                                    "Denied (Alerts may be delayed by Android)"
+                                },
                                 style = MaterialTheme.typography.bodySmall,
-                                color = if (canExactAlarms) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                                color = if (canExactAlarms) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.error
+                                },
                             )
                         }
                         Icon(
                             imageVector = if (canExactAlarms) Icons.Default.Check else Icons.Default.Warning,
                             contentDescription = null,
-                            tint = if (canExactAlarms) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                            tint = if (canExactAlarms) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.error
+                            },
                         )
                     }
 
                     if (!canExactAlarms && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                         OutlinedButton(
                             onClick = onOpenExactAlarmSettings,
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
                         ) {
                             Text("Grant Exact Alarm Permission")
                         }
@@ -97,38 +113,49 @@ fun BackgroundReliabilitySection(
             Surface(
                 shape = RoundedCornerShape(12.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = "Battery Optimization",
                                 style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
                             )
                             Text(
-                                text = if (isBatteryIgnored) "Unrestricted (Recommended)"
-                                else "Optimized (OS may throttle background alarms)",
+                                text = if (isBatteryIgnored) {
+                                    "Unrestricted (Recommended)"
+                                } else {
+                                    "Optimized (OS may throttle background alarms)"
+                                },
                                 style = MaterialTheme.typography.bodySmall,
-                                color = if (isBatteryIgnored) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                                color = if (isBatteryIgnored) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.error
+                                },
                             )
                         }
                         Icon(
                             imageVector = if (isBatteryIgnored) Icons.Default.Check else Icons.Default.Warning,
                             contentDescription = null,
-                            tint = if (isBatteryIgnored) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                            tint = if (isBatteryIgnored) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.error
+                            },
                         )
                     }
 
                     if (!isBatteryIgnored) {
                         OutlinedButton(
                             onClick = onOpenBatterySettings,
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
                         ) {
                             Text("Set Battery to Unrestricted")
                         }
@@ -140,28 +167,35 @@ fun BackgroundReliabilitySection(
             Surface(
                 shape = RoundedCornerShape(12.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         text = "Test Background Alert (10 Seconds)",
                         style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
                     )
                     Text(
-                        text = "Tap to schedule a test alert in 10 seconds, then lock your device or leave the app to test background wakeup.",
+                        text = "Tap to schedule a test alert in 10 seconds, then lock your device or leave the" +
+                            " app to test background wakeup.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
 
                     Button(
                         onClick = {
-                            onScheduleTestAlarm(10)
+                            onScheduleTestAlarm(TEST_ALARM_DELAY_SECONDS)
                             testAlarmScheduled = true
                         },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text(if (testAlarmScheduled) "Test Alert Scheduled (Fires in 10s)" else "Schedule 10s Test Alert")
+                        Text(
+                            if (testAlarmScheduled) {
+                                "Test Alert Scheduled (Fires in 10s)"
+                            } else {
+                                "Schedule 10s Test Alert"
+                            },
+                        )
                     }
 
                     if (testAlarmScheduled) {
@@ -169,7 +203,7 @@ fun BackgroundReliabilitySection(
                             text = "✓ Scheduled! Lock your device now to verify.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.SemiBold,
                         )
                     }
                 }

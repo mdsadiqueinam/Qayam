@@ -1,3 +1,5 @@
+@file:Suppress("FunctionNaming", "LongMethod", "MagicNumber", "CyclomaticComplexMethod")
+
 package tech.sadique.qayam.ui.components
 
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -10,13 +12,11 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -52,19 +52,16 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 @Composable
-fun MasjidHorizonCanvas(
-    state: CurrentPrayerState?,
-    modifier: Modifier = Modifier
-) {
+fun MasjidHorizonCanvas(state: CurrentPrayerState?, modifier: Modifier = Modifier) {
     val infiniteTransition = rememberInfiniteTransition(label = "HorizonAnimation")
     val pulse by infiniteTransition.animateFloat(
         initialValue = 0.92f,
         targetValue = 1.08f,
         animationSpec = infiniteRepeatable(
             animation = tween(2400, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
+            repeatMode = RepeatMode.Reverse,
         ),
-        label = "SunGlowPulse"
+        label = "SunGlowPulse",
     )
 
     val currentPrayer = state?.currentPrayer ?: PrayerType.DHUHR
@@ -98,8 +95,8 @@ fun MasjidHorizonCanvas(
                 brush = Brush.verticalGradient(
                     colors = skyGradientColors,
                     startY = 0f,
-                    endY = height
-                )
+                    endY = height,
+                ),
             )
 
             // 1b. Top scrim so the pill/clock/tag overlay stays legible
@@ -108,11 +105,11 @@ fun MasjidHorizonCanvas(
                 brush = Brush.verticalGradient(
                     colors = listOf(
                         Color.Black.copy(alpha = 0.30f),
-                        Color.Transparent
+                        Color.Transparent,
                     ),
                     startY = 0f,
-                    endY = height * 0.55f
-                )
+                    endY = height * 0.55f,
+                ),
             )
 
             // 2. Draw Stars (if night or twilight)
@@ -126,9 +123,12 @@ fun MasjidHorizonCanvas(
             val arcPath = Path().apply {
                 moveTo(width * 0.08f, horizonY)
                 cubicTo(
-                    width * 0.25f, height * 0.15f,
-                    width * 0.75f, height * 0.15f,
-                    width * 0.92f, horizonY
+                    width * 0.25f,
+                    height * 0.15f,
+                    width * 0.75f,
+                    height * 0.15f,
+                    width * 0.92f,
+                    horizonY,
                 )
             }
             drawPath(
@@ -136,8 +136,8 @@ fun MasjidHorizonCanvas(
                 color = Color.White.copy(alpha = 0.25f),
                 style = Stroke(
                     width = 2.dp.toPx(),
-                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(12f, 10f), 0f)
-                )
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(12f, 10f), 0f),
+                ),
             )
 
             // 4. Calculate Sun / Moon position along the arc
@@ -155,13 +155,13 @@ fun MasjidHorizonCanvas(
                 drawSun(
                     center = Offset(celestialX, celestialY),
                     pulse = pulse,
-                    prayerType = currentPrayer
+                    prayerType = currentPrayer,
                 )
             } else {
                 // Draw Moon (Crescent)
                 drawCrescentMoon(
                     center = Offset(celestialX, celestialY),
-                    pulse = pulse
+                    pulse = pulse,
                 )
             }
 
@@ -176,7 +176,7 @@ private fun DrawScope.drawStars(width: Float, maxHeight: Float, twinkle: Float) 
         Pair(0.12f, 0.20f), Pair(0.25f, 0.12f), Pair(0.38f, 0.28f),
         Pair(0.48f, 0.15f), Pair(0.62f, 0.22f), Pair(0.72f, 0.10f),
         Pair(0.85f, 0.25f), Pair(0.18f, 0.42f), Pair(0.82f, 0.45f),
-        Pair(0.55f, 0.35f), Pair(0.30f, 0.48f), Pair(0.68f, 0.50f)
+        Pair(0.55f, 0.35f), Pair(0.30f, 0.48f), Pair(0.68f, 0.50f),
     )
 
     for ((index, coord) in starCoords.withIndex()) {
@@ -188,7 +188,7 @@ private fun DrawScope.drawStars(width: Float, maxHeight: Float, twinkle: Float) 
         drawCircle(
             color = Color.White.copy(alpha = alpha * 0.85f),
             radius = radius,
-            center = Offset(x, y)
+            center = Offset(x, y),
         )
     }
 }
@@ -206,26 +206,26 @@ private fun DrawScope.drawSun(center: Offset, pulse: Float, prayerType: PrayerTy
             colors = listOf(
                 sunColor.copy(alpha = 0.55f),
                 sunColor.copy(alpha = 0.20f),
-                Color.Transparent
+                Color.Transparent,
             ),
             center = center,
-            radius = 42.dp.toPx() * pulse
+            radius = 42.dp.toPx() * pulse,
         ),
         radius = 42.dp.toPx() * pulse,
-        center = center
+        center = center,
     )
 
     // Inner Radiant Sun
     drawCircle(
         color = Color(0xFFFFF9C4),
         radius = 16.dp.toPx(),
-        center = center
+        center = center,
     )
 
     drawCircle(
         color = sunColor,
         radius = 13.dp.toPx(),
-        center = center
+        center = center,
     )
 }
 
@@ -235,13 +235,13 @@ private fun DrawScope.drawCrescentMoon(center: Offset, pulse: Float) {
         brush = Brush.radialGradient(
             colors = listOf(
                 GoldLight.copy(alpha = 0.35f),
-                Color.Transparent
+                Color.Transparent,
             ),
             center = center,
-            radius = 35.dp.toPx() * pulse
+            radius = 35.dp.toPx() * pulse,
         ),
         radius = 35.dp.toPx() * pulse,
-        center = center
+        center = center,
     )
 
     // Glowing Crescent Moon
@@ -249,21 +249,21 @@ private fun DrawScope.drawCrescentMoon(center: Offset, pulse: Float) {
     drawCircle(
         color = Color(0xFFFFF7C2),
         radius = moonRadius,
-        center = center
+        center = center,
     )
 
     // Subtracting inner circle for crescent curve
     drawCircle(
         color = SkyIshaMid,
         radius = moonRadius * 0.85f,
-        center = Offset(center.x + moonRadius * 0.45f, center.y - moonRadius * 0.25f)
+        center = Offset(center.x + moonRadius * 0.45f, center.y - moonRadius * 0.25f),
     )
 
     // Small star near the moon
     drawCircle(
         color = GoldAccent,
         radius = 2.dp.toPx(),
-        center = Offset(center.x + moonRadius * 1.3f, center.y + moonRadius * 0.2f)
+        center = Offset(center.x + moonRadius * 1.3f, center.y + moonRadius * 0.2f),
     )
 }
 
@@ -272,7 +272,7 @@ private fun DrawScope.drawHorizonAndMosque(
     height: Float,
     horizonY: Float,
     prayerType: PrayerType,
-    isDaytime: Boolean
+    isDaytime: Boolean,
 ) {
     val silhouetteColor = if (isDaytime) {
         when (prayerType) {
@@ -296,12 +296,12 @@ private fun DrawScope.drawHorizonAndMosque(
             colors = listOf(
                 Color.Transparent,
                 if (isDaytime) GoldLight.copy(alpha = 0.6f) else DarkPrimary.copy(alpha = 0.4f),
-                Color.Transparent
-            )
+                Color.Transparent,
+            ),
         ),
         start = Offset(0f, horizonY),
         end = Offset(width, horizonY),
-        strokeWidth = 2.5.dp.toPx()
+        strokeWidth = 2.5.dp.toPx(),
     )
 
     val mosquePath = Path().apply {
@@ -342,14 +342,20 @@ private fun DrawScope.drawHorizonAndMosque(
         lineTo(d1x - d1Radius, d1BaseY)
         // Dome curve
         cubicTo(
-            d1x - d1Radius, d1BaseY - d1Radius * 1.1f,
-            d1x - d1Radius * 0.2f, d1BaseY - d1Radius * 1.4f,
-            d1x, d1BaseY - d1Radius * 1.55f // Dome tip
+            d1x - d1Radius,
+            d1BaseY - d1Radius * 1.1f,
+            d1x - d1Radius * 0.2f,
+            d1BaseY - d1Radius * 1.4f,
+            d1x,
+            d1BaseY - d1Radius * 1.55f, // Dome tip
         )
         cubicTo(
-            d1x + d1Radius * 0.2f, d1BaseY - d1Radius * 1.4f,
-            d1x + d1Radius, d1BaseY - d1Radius * 1.1f,
-            d1x + d1Radius, d1BaseY
+            d1x + d1Radius * 0.2f,
+            d1BaseY - d1Radius * 1.4f,
+            d1x + d1Radius,
+            d1BaseY - d1Radius * 1.1f,
+            d1x + d1Radius,
+            d1BaseY,
         )
         lineTo(d1x + d1Radius, horizonY)
 
@@ -361,17 +367,23 @@ private fun DrawScope.drawHorizonAndMosque(
         lineTo(cx - mainDomeRadius, horizonY)
         lineTo(cx - mainDomeRadius, mainBaseY)
         cubicTo(
-            cx - mainDomeRadius, mainBaseY - mainDomeRadius * 1.15f,
-            cx - mainDomeRadius * 0.25f, mainBaseY - mainDomeRadius * 1.5f,
-            cx, domeTipY
+            cx - mainDomeRadius,
+            mainBaseY - mainDomeRadius * 1.15f,
+            cx - mainDomeRadius * 0.25f,
+            mainBaseY - mainDomeRadius * 1.5f,
+            cx,
+            domeTipY,
         )
         // Crescent Finial on center dome
         lineTo(cx, domeTipY - 14.dp.toPx())
         lineTo(cx, domeTipY)
         cubicTo(
-            cx + mainDomeRadius * 0.25f, mainBaseY - mainDomeRadius * 1.5f,
-            cx + mainDomeRadius, mainBaseY - mainDomeRadius * 1.15f,
-            cx + mainDomeRadius, mainBaseY
+            cx + mainDomeRadius * 0.25f,
+            mainBaseY - mainDomeRadius * 1.5f,
+            cx + mainDomeRadius,
+            mainBaseY - mainDomeRadius * 1.15f,
+            cx + mainDomeRadius,
+            mainBaseY,
         )
         lineTo(cx + mainDomeRadius, horizonY)
 
@@ -382,14 +394,20 @@ private fun DrawScope.drawHorizonAndMosque(
         lineTo(d2x - d2Radius, horizonY)
         lineTo(d2x - d2Radius, d2BaseY)
         cubicTo(
-            d2x - d2Radius, d2BaseY - d2Radius * 1.1f,
-            d2x - d2Radius * 0.2f, d2BaseY - d2Radius * 1.4f,
-            d2x, d2BaseY - d2Radius * 1.55f
+            d2x - d2Radius,
+            d2BaseY - d2Radius * 1.1f,
+            d2x - d2Radius * 0.2f,
+            d2BaseY - d2Radius * 1.4f,
+            d2x,
+            d2BaseY - d2Radius * 1.55f,
         )
         cubicTo(
-            d2x + d2Radius * 0.2f, d2BaseY - d2Radius * 1.4f,
-            d2x + d2Radius, d2BaseY - d2Radius * 1.1f,
-            d2x + d2Radius, d2BaseY
+            d2x + d2Radius * 0.2f,
+            d2BaseY - d2Radius * 1.4f,
+            d2x + d2Radius,
+            d2BaseY - d2Radius * 1.1f,
+            d2x + d2Radius,
+            d2BaseY,
         )
         lineTo(d2x + d2Radius, horizonY)
 
@@ -419,7 +437,7 @@ private fun DrawScope.drawHorizonAndMosque(
 
     drawPath(
         path = mosquePath,
-        color = silhouetteColor
+        color = silhouetteColor,
     )
 
     // Draw illuminated crescent on top of the main dome
@@ -431,7 +449,7 @@ private fun DrawScope.drawHorizonAndMosque(
     drawCircle(
         color = accentGoldColor,
         radius = 3.5.dp.toPx(),
-        center = Offset(cx, domeTipY - 14.dp.toPx())
+        center = Offset(cx, domeTipY - 14.dp.toPx()),
     )
 }
 
@@ -448,9 +466,9 @@ private fun starTwinkleOrStatic(showStars: Boolean): Float {
         targetValue = 1.0f,
         animationSpec = infiniteRepeatable(
             animation = tween(1800, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
+            repeatMode = RepeatMode.Reverse,
         ),
-        label = "StarTwinkleValue"
+        label = "StarTwinkleValue",
     )
     return twinkle
 }
@@ -467,7 +485,7 @@ private fun MasjidHorizonDayPreview() {
 @Composable
 private fun MasjidHorizonNightPreview() {
     tech.sadique.qayam.ui.theme.SalahTheme(
-        themeMode = tech.sadique.qayam.data.model.AppThemeMode.NIGHT_MOSQUE
+        themeMode = tech.sadique.qayam.data.model.AppThemeMode.NIGHT_MOSQUE,
     ) {
         MasjidHorizonCanvas(state = previewPrayerState().copy(isDaytime = false))
     }

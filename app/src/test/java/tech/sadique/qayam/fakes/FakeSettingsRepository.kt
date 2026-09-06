@@ -3,7 +3,6 @@ package tech.sadique.qayam.fakes
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import tech.sadique.qayam.data.model.AdhanSoundType
 import tech.sadique.qayam.data.model.AppThemeMode
 import tech.sadique.qayam.data.model.CalculationMethod
@@ -14,9 +13,7 @@ import tech.sadique.qayam.data.model.PrayerType
 import tech.sadique.qayam.data.preferences.SettingsRepository
 import tech.sadique.qayam.data.preferences.UserSettings
 
-class FakeSettingsRepository(
-    initialSettings: UserSettings = UserSettings()
-) : SettingsRepository {
+class FakeSettingsRepository(initialSettings: UserSettings = UserSettings()) : SettingsRepository {
 
     private val _settings = MutableStateFlow(initialSettings)
     override val settings: Flow<UserSettings> = _settings.asStateFlow()

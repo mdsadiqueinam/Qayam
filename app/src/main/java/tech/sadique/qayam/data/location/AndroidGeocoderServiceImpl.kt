@@ -3,6 +3,7 @@ package tech.sadique.qayam.data.location
 import android.content.Context
 import android.location.Geocoder
 import android.os.Build
+import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -11,10 +12,10 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class AndroidGeocoderServiceImpl @Inject constructor(
-    @ApplicationContext private val context: Context
-) : GeocoderService {
+class AndroidGeocoderServiceImpl @Inject constructor(@ApplicationContext private val context: Context) :
+    GeocoderService {
 
+    @Suppress("TooGenericExceptionCaught")
     override suspend fun getCityAndCountry(lat: Double, lng: Double): Pair<String, String> =
         withContext(Dispatchers.IO) {
             try {
@@ -32,6 +33,7 @@ class AndroidGeocoderServiceImpl @Inject constructor(
                     String.format(Locale.US, "%.2f°, %.2f°", lat, lng) to "GPS Location"
                 }
             } catch (e: Exception) {
+                Log.w("AndroidGeocoder", "Failed to reverse geocode ($lat, $lng)", e)
                 String.format(Locale.US, "%.2f°, %.2f°", lat, lng) to "GPS Location"
             }
         }

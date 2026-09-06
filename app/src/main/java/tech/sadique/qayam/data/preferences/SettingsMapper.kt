@@ -18,22 +18,23 @@ internal fun defaultSound(prayer: PrayerType): AdhanSoundType = when (prayer) {
 }
 
 /** Maps raw preferences to settings. Internal for unit tests (legacy-format coverage). */
+@Suppress("CyclomaticComplexMethod")
 internal fun Preferences.toUserSettings(): UserSettings {
     val lat = this[SettingsKeys.LAT] ?: 21.4225
     val lng = this[SettingsKeys.LNG] ?: 39.8262
     val isGps = this[SettingsKeys.GPS_AUTO] ?: true
     return UserSettings(
         calculationMethod = CalculationMethod.fromId(
-            this[SettingsKeys.CALC_METHOD] ?: CalculationMethod.MUSLIM_WORLD_LEAGUE.id
+            this[SettingsKeys.CALC_METHOD] ?: CalculationMethod.MUSLIM_WORLD_LEAGUE.id,
         ),
         juristicMethod = JuristicMethod.fromId(
-            this[SettingsKeys.JURISTIC] ?: JuristicMethod.STANDARD.id
+            this[SettingsKeys.JURISTIC] ?: JuristicMethod.STANDARD.id,
         ),
         highLatitudeRule = HighLatitudeRule.fromId(
-            this[SettingsKeys.HIGH_LAT] ?: HighLatitudeRule.ANGLE_BASED.id
+            this[SettingsKeys.HIGH_LAT] ?: HighLatitudeRule.ANGLE_BASED.id,
         ),
         themeMode = AppThemeMode.fromId(
-            this[SettingsKeys.THEME] ?: AppThemeMode.SYSTEM.id
+            this[SettingsKeys.THEME] ?: AppThemeMode.SYSTEM.id,
         ),
         highPrioritySound = this[SettingsKeys.HIGH_PRIORITY] ?: true,
         isGpsAuto = isGps,
@@ -43,7 +44,7 @@ internal fun Preferences.toUserSettings(): UserSettings {
             longitude = lng,
             cityName = this[SettingsKeys.CITY] ?: "Makkah",
             countryName = this[SettingsKeys.COUNTRY] ?: "Saudi Arabia",
-            isGpsBased = isGps
+            isGpsBased = isGps,
         ),
         prayerAlertSounds = PrayerType.dailyPrayers.associateWith { prayer ->
             AdhanSoundType.fromId(this[SettingsKeys.sound(prayer)] ?: defaultSound(prayer).id)
@@ -53,6 +54,6 @@ internal fun Preferences.toUserSettings(): UserSettings {
         },
         minuteOffsets = PrayerType.dailyPrayers.associateWith { prayer ->
             this[SettingsKeys.offset(prayer)] ?: 0
-        }
+        },
     )
 }

@@ -1,3 +1,5 @@
+@file:Suppress("FunctionNaming", "MatchingDeclarationName")
+
 package tech.sadique.qayam.ui.navigation
 
 import androidx.activity.compose.BackHandler
@@ -20,14 +22,11 @@ import tech.sadique.qayam.ui.viewmodel.PrayerViewModel
 
 enum class AppScreen {
     MAIN,
-    SETTINGS
+    SETTINGS,
 }
 
 @Composable
-fun AppNavHost(
-    viewModel: PrayerViewModel,
-    modifier: Modifier = Modifier
-) {
+fun AppNavHost(viewModel: PrayerViewModel, modifier: Modifier = Modifier) {
     var currentScreenId by rememberSaveable { mutableStateOf(AppScreen.MAIN.name) }
     val currentScreen = AppScreen.valueOf(currentScreenId)
 
@@ -41,25 +40,26 @@ fun AppNavHost(
         transitionSpec = {
             if (targetState == AppScreen.SETTINGS) {
                 (slideInHorizontally { width -> width } + fadeIn()) togetherWith
-                        (slideOutHorizontally { width -> -width } + fadeOut())
+                    (slideOutHorizontally { width -> -width } + fadeOut())
             } else {
                 (slideInHorizontally { width -> -width } + fadeIn()) togetherWith
-                        (slideOutHorizontally { width -> width } + fadeOut())
+                    (slideOutHorizontally { width -> width } + fadeOut())
             }
         },
-        label = "ScreenTransition"
+        label = "ScreenTransition",
     ) { screen ->
         when (screen) {
             AppScreen.MAIN -> {
                 MainPrayerScreen(
                     viewModel = viewModel,
-                    onNavigateToSettings = { currentScreenId = AppScreen.SETTINGS.name }
+                    onNavigateToSettings = { currentScreenId = AppScreen.SETTINGS.name },
                 )
             }
+
             AppScreen.SETTINGS -> {
                 SettingsScreen(
                     viewModel = viewModel,
-                    onNavigateBack = { currentScreenId = AppScreen.MAIN.name }
+                    onNavigateBack = { currentScreenId = AppScreen.MAIN.name },
                 )
             }
         }

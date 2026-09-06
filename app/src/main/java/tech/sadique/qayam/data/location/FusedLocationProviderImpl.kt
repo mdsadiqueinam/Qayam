@@ -21,19 +21,21 @@ import kotlin.coroutines.resume
 import kotlin.time.Duration.Companion.seconds
 
 @Singleton
-class FusedLocationProviderImpl @Inject constructor(
-    @ApplicationContext private val context: Context
-) : LocationProvider {
+class FusedLocationProviderImpl @Inject constructor(@ApplicationContext private val context: Context) :
+    LocationProvider {
 
     private val fusedLocationClient: FusedLocationProviderClient =
         LocationServices.getFusedLocationProviderClient(context)
 
+    @Suppress("TooGenericExceptionCaught")
     override suspend fun getCurrentLocation(): Coordinates? = withContext(Dispatchers.IO) {
         val hasPerm = ContextCompat.checkSelfPermission(
-            context, Manifest.permission.ACCESS_FINE_LOCATION
+            context,
+            Manifest.permission.ACCESS_FINE_LOCATION,
         ) == PackageManager.PERMISSION_GRANTED ||
             ContextCompat.checkSelfPermission(
-                context, Manifest.permission.ACCESS_COARSE_LOCATION
+                context,
+                Manifest.permission.ACCESS_COARSE_LOCATION,
             ) == PackageManager.PERMISSION_GRANTED
         if (!hasPerm) {
             Log.w("LocationProvider", "Location permission not granted")
@@ -69,7 +71,7 @@ class FusedLocationProviderImpl @Inject constructor(
                 Coordinates(
                     latitude = it.latitude,
                     longitude = it.longitude,
-                    altitude = it.altitude
+                    altitude = it.altitude,
                 )
             }
         } catch (e: Exception) {
@@ -78,14 +80,14 @@ class FusedLocationProviderImpl @Inject constructor(
         }
     }
 
-    private suspend fun fetchLastKnownLocation(): Location? =
-        suspendCancellableCoroutine { continuation ->
-            try {
-                fusedLocationClient.lastLocation
-                    .addOnSuccessListener { if (continuation.isActive) continuation.resume(it) }
-                    .addOnFailureListener { if (continuation.isActive) continuation.resume(null) }
-            } catch (e: SecurityException) {
-                if (continuation.isActive) continuation.resume(null)
-            }
+    private suspend fun fetchLastKnownLocation(): Location? = suspendCancellableCoroutine { continuation ->
+        try {
+            fusedLocationClient.lastLocation
+                .addOnSuccessListener { if (continuation.isActive) continuation.resume(it) }
+                .addOnFailureListener { if (continuation.isActive) continuation.resume(null) }
+        } catch (e: SecurityException) {
+            Log.w("LocationProvider", "Security exception fetching last known location", e)
+            if (continuation.isActive) continuation.resume(null)
         }
+    }
 }

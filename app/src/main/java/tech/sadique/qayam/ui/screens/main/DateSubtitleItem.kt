@@ -1,3 +1,5 @@
+@file:Suppress("FunctionNaming")
+
 package tech.sadique.qayam.ui.screens.main
 
 import androidx.compose.foundation.layout.Column
@@ -14,23 +16,19 @@ import java.util.Date
 import java.util.Locale
 
 @Composable
-fun DateSubtitleItem(
-    currentTimeMillis: Long,
-    calculationTitle: String,
-    modifier: Modifier = Modifier
-) {
+fun DateSubtitleItem(currentTimeMillis: Long, calculationTitle: String, modifier: Modifier = Modifier) {
     val dateFormatter = remember { SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.getDefault()) }
     Column(modifier = modifier.padding(horizontal = 4.dp)) {
         Text(
             text = dateFormatter.format(Date(currentTimeMillis)),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onBackground
+            color = MaterialTheme.colorScheme.onBackground,
         )
         Text(
             text = "Calculation: $calculationTitle",
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
         )
     }
 }

@@ -1,3 +1,5 @@
+@file:Suppress("FunctionNaming", "LongMethod")
+
 package tech.sadique.qayam.ui.components
 
 import androidx.compose.foundation.clickable
@@ -35,13 +37,13 @@ fun PrayerSoundPicker(
     playingSoundType: AdhanSoundType?,
     onSelectSound: (AdhanSoundType) -> Unit,
     onPlayPreview: (AdhanSoundType) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     LazyColumn(
         verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(max = 400.dp)
+            .heightIn(max = 400.dp),
     ) {
         items(AdhanSoundType.entries) { sound ->
             val isSelected = sound == currentSound
@@ -49,41 +51,48 @@ fun PrayerSoundPicker(
 
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
+                color = if (isSelected) {
+                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                } else {
+                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
                     .clickable { onSelectSound(sound) }
-                    .testTag("sound_dialog_option_${sound.id}")
+                    .testTag("sound_dialog_option_${sound.id}"),
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Row(
                         modifier = Modifier.weight(1f),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         RadioButton(
                             selected = isSelected,
-                            onClick = { onSelectSound(sound) }
+                            onClick = { onSelectSound(sound) },
                         )
                         Column {
                             Text(
                                 text = sound.title,
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
-                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                color = if (isSelected) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface
+                                },
                             )
                             Text(
                                 text = sound.description,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -91,12 +100,17 @@ fun PrayerSoundPicker(
                     if (sound != AdhanSoundType.SILENT && sound != AdhanSoundType.VIBRATE_ONLY) {
                         IconButton(
                             onClick = { onPlayPreview(sound) },
-                            modifier = Modifier.testTag("preview_dialog_${sound.id}")
+                            modifier = Modifier.testTag("preview_dialog_${sound.id}"),
                         ) {
                             Icon(
                                 imageVector = if (isPlaying) Icons.Default.Stop else Icons.Default.GraphicEq,
-                                contentDescription = "Preview ${sound.title}" + if (isPlaying) ", playing, tap to stop" else "",
-                                tint = if (isPlaying) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                                contentDescription =
+                                "Preview ${sound.title}" + if (isPlaying) ", playing, tap to stop" else "",
+                                tint = if (isPlaying) {
+                                    MaterialTheme.colorScheme.error
+                                } else {
+                                    MaterialTheme.colorScheme.primary
+                                },
                             )
                         }
                     }

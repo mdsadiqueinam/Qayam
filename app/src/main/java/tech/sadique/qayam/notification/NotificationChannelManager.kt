@@ -11,9 +11,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class NotificationChannelManager @Inject constructor(
-    @ApplicationContext private val context: Context
-) {
+class NotificationChannelManager @Inject constructor(@ApplicationContext private val context: Context) {
     companion object {
         const val ADHAN_CHANNEL_ID = "salah_adhan_channel_high_priority"
         const val ADHAN_VIBRATE_CHANNEL_ID = "salah_adhan_channel_vibrate"
@@ -33,7 +31,7 @@ class NotificationChannelManager @Inject constructor(
             val adhanChannel = NotificationChannel(
                 ADHAN_CHANNEL_ID,
                 "Adhan Prayer Alerts (High Priority)",
-                NotificationManager.IMPORTANCE_HIGH
+                NotificationManager.IMPORTANCE_HIGH,
             ).apply {
                 description = "Plays Adhan audio and high-priority alerts for Salah prayer times"
                 enableVibration(true)
@@ -47,7 +45,7 @@ class NotificationChannelManager @Inject constructor(
             val vibrateChannel = NotificationChannel(
                 ADHAN_VIBRATE_CHANNEL_ID,
                 "Prayer Alerts (Vibrate Only)",
-                NotificationManager.IMPORTANCE_HIGH
+                NotificationManager.IMPORTANCE_HIGH,
             ).apply {
                 description = "High-priority haptic vibration alerts for Salah prayer times"
                 enableVibration(true)
@@ -61,7 +59,7 @@ class NotificationChannelManager @Inject constructor(
             val silentChannel = NotificationChannel(
                 ADHAN_SILENT_CHANNEL_ID,
                 "Prayer Alerts (Visual / Silent)",
-                NotificationManager.IMPORTANCE_HIGH
+                NotificationManager.IMPORTANCE_HIGH,
             ).apply {
                 description = "Visual-only notifications for Salah times without sound or vibration"
                 enableVibration(false)

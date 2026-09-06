@@ -9,9 +9,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class SchedulePrayerAlarmsUseCase @Inject constructor(
-    private val alarmScheduler: AlarmScheduler
-) {
+class SchedulePrayerAlarmsUseCase @Inject constructor(private val alarmScheduler: AlarmScheduler) {
     operator fun invoke(settings: UserSettings) {
         val loc = settings.currentLocation
         val now = Calendar.getInstance()
@@ -26,7 +24,7 @@ class SchedulePrayerAlarmsUseCase @Inject constructor(
             method = settings.calculationMethod,
             juristic = settings.juristicMethod,
             highLatitudeRule = settings.highLatitudeRule,
-            minuteOffsets = settings.minuteOffsets
+            minuteOffsets = settings.minuteOffsets,
         )
 
         val tomorrowCal = now.clone() as Calendar
@@ -40,7 +38,7 @@ class SchedulePrayerAlarmsUseCase @Inject constructor(
             method = settings.calculationMethod,
             juristic = settings.juristicMethod,
             highLatitudeRule = settings.highLatitudeRule,
-            minuteOffsets = settings.minuteOffsets
+            minuteOffsets = settings.minuteOffsets,
         )
 
         val prayers = PrayerType.dailyPrayers

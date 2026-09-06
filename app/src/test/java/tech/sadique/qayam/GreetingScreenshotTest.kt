@@ -2,11 +2,6 @@ package tech.sadique.qayam
 
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
-import tech.sadique.qayam.data.model.AdhanSoundType
-import tech.sadique.qayam.data.model.AppThemeMode
-import tech.sadique.qayam.data.model.PrayerType
-import tech.sadique.qayam.ui.components.PrayerCard
-import tech.sadique.qayam.ui.theme.SalahTheme
 import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
 import com.github.takahirom.roborazzi.captureRoboImage
 import org.junit.Rule
@@ -15,6 +10,11 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import tech.sadique.qayam.data.model.AdhanSoundType
+import tech.sadique.qayam.data.model.AppThemeMode
+import tech.sadique.qayam.data.model.PrayerType
+import tech.sadique.qayam.ui.components.PrayerCard
+import tech.sadique.qayam.ui.theme.SalahTheme
 import java.util.Calendar
 
 @RunWith(RobolectricTestRunner::class)
@@ -44,7 +44,7 @@ class GreetingScreenshotTest {
                     isEnabled = true,
                     isPlayingThisSound = false,
                     onToggleAlert = {},
-                    onSoundClick = {}
+                    onSoundClick = {},
                 )
             }
         }
@@ -70,7 +70,7 @@ class GreetingScreenshotTest {
                     isEnabled = true,
                     isPlayingThisSound = false,
                     onToggleAlert = {},
-                    onSoundClick = {}
+                    onSoundClick = {},
                 )
             }
         }
@@ -96,7 +96,7 @@ class GreetingScreenshotTest {
                     isEnabled = false,
                     isPlayingThisSound = false,
                     onToggleAlert = {},
-                    onSoundClick = {}
+                    onSoundClick = {},
                 )
             }
         }

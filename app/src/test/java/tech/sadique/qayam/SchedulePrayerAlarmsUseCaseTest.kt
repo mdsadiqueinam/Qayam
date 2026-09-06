@@ -37,8 +37,8 @@ class SchedulePrayerAlarmsUseCaseTest {
         val settings = UserSettings(
             prayerAlertEnabled = mapOf(
                 PrayerType.FAJR to false,
-                PrayerType.DHUHR to true
-            )
+                PrayerType.DHUHR to true,
+            ),
         )
 
         useCase(settings)
@@ -55,8 +55,8 @@ class SchedulePrayerAlarmsUseCaseTest {
         val settings = UserSettings(
             highPrioritySound = true,
             prayerAlertSounds = mapOf(
-                PrayerType.FAJR to AdhanSoundType.MADINAH
-            )
+                PrayerType.FAJR to AdhanSoundType.MADINAH,
+            ),
         )
 
         useCase(settings)

@@ -33,12 +33,9 @@ class AdhanPlaybackService : Service() {
         const val EXTRA_SOUND_TYPE = "extra_sound_type"
         const val EXTRA_HIGH_PRIORITY = "extra_high_priority"
 
-        fun start(
-            context: Context,
-            prayerType: PrayerType,
-            soundType: AdhanSoundType,
-            highPriority: Boolean
-        ) {
+        private const val WAKELOCK_TIMEOUT_MS = 180_000L
+
+        fun start(context: Context, prayerType: PrayerType, soundType: AdhanSoundType, highPriority: Boolean) {
             val intent = Intent(context, AdhanPlaybackService::class.java).apply {
                 action = ACTION_START_PLAYBACK
                 putExtra(EXTRA_PRAYER_ID, prayerType.id)
@@ -52,6 +49,7 @@ class AdhanPlaybackService : Service() {
             }
         }
 
+        @Suppress("TooGenericExceptionCaught")
         fun stop(context: Context) {
             val intent = Intent(context, AdhanPlaybackService::class.java).apply {
                 action = ACTION_STOP_PLAYBACK
@@ -78,9 +76,9 @@ class AdhanPlaybackService : Service() {
 
         when (action) {
             ACTION_STOP_PLAYBACK,
-            PrayerNotificationNotifier.ACTION_STOP_ADHAN -> {
+            PrayerNotificationNotifier.ACTION_STOP_ADHAN,
+            -> {
                 stopPlaybackAndFinish()
-                return START_NOT_STICKY
             }
 
             ACTION_START_PLAYBACK -> {
@@ -107,14 +105,14 @@ class AdhanPlaybackService : Service() {
                     this,
                     notificationId,
                     notification,
-                    foregroundServiceType
+                    foregroundServiceType,
                 )
 
                 // Play Audio
                 audioPlayer.playSound(
                     soundType = soundType,
                     highPriority = highPriority,
-                    volume = 1.0f
+                    volume = 1.0f,
                 ) {
                     Log.d(TAG, "Audio synthesis complete, stopping playback service")
                     stopPlaybackAndFinish()
@@ -130,14 +128,15 @@ class AdhanPlaybackService : Service() {
             val powerManager = getSystemService(Context.POWER_SERVICE) as? PowerManager
             wakeLock = powerManager?.newWakeLock(
                 PowerManager.PARTIAL_WAKE_LOCK,
-                "qayam:AdhanPlaybackWakeLock"
+                "qayam:AdhanPlaybackWakeLock",
             )?.apply {
                 setReferenceCounted(false)
-                acquire(3 * 60 * 1000L) // 3 minutes timeout safety
+                acquire(WAKELOCK_TIMEOUT_MS)
             }
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private fun releaseWakeLock() {
         try {
             if (wakeLock?.isHeld == true) {

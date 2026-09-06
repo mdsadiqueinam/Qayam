@@ -19,14 +19,13 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class PrayerNotificationNotifier @Inject constructor(
-    @ApplicationContext private val context: Context
-) {
+class PrayerNotificationNotifier @Inject constructor(@ApplicationContext private val context: Context) {
     companion object {
         const val NOTIFICATION_ID_BASE = 1000
         const val ACTION_STOP_ADHAN = "tech.sadique.qayam.ACTION_STOP_ADHAN"
         const val EXTRA_PRAYER_NAME = "extra_prayer_name"
         const val EXTRA_PRAYER_ID = "extra_prayer_id"
+        private val VIBRATION_PATTERN = longArrayOf(0, 600L, 300L, 600L, 300L, 1200L)
     }
 
     private val notificationManager = context.getSystemService<NotificationManager>()
@@ -34,7 +33,7 @@ class PrayerNotificationNotifier @Inject constructor(
     fun buildPrayerNotification(
         prayerType: PrayerType,
         soundType: AdhanSoundType,
-        highPriority: Boolean
+        highPriority: Boolean,
     ): Notification {
         val channelId = when (soundType) {
             AdhanSoundType.SILENT -> NotificationChannelManager.ADHAN_SILENT_CHANNEL_ID
@@ -50,7 +49,7 @@ class PrayerNotificationNotifier @Inject constructor(
             context,
             prayerType.ordinal,
             openAppIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
         val stopIntent = Intent(context, AdhanAlarmReceiver::class.java).apply {
@@ -60,7 +59,7 @@ class PrayerNotificationNotifier @Inject constructor(
             context,
             9999,
             stopIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
         val timeFormatter = SimpleDateFormat("h:mm a", Locale.getDefault())
@@ -92,12 +91,12 @@ class PrayerNotificationNotifier @Inject constructor(
             builder.addAction(
                 android.R.drawable.ic_media_pause,
                 "Stop Adhan Audio",
-                stopPendingIntent
+                stopPendingIntent,
             )
         }
 
         if (soundType != AdhanSoundType.SILENT) {
-            builder.setVibrate(longArrayOf(0, 600, 300, 600, 300, 1200))
+            builder.setVibrate(VIBRATION_PATTERN)
         }
 
         return builder.build()

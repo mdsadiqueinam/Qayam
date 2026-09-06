@@ -1,3 +1,5 @@
+@file:Suppress("FunctionNaming", "LongMethod")
+
 package tech.sadique.qayam.ui.screens
 
 import android.content.Intent
@@ -54,11 +56,7 @@ import tech.sadique.qayam.ui.viewmodel.PrayerViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(
-    viewModel: PrayerViewModel,
-    onNavigateBack: () -> Unit,
-    modifier: Modifier = Modifier
-) {
+fun SettingsScreen(viewModel: PrayerViewModel, onNavigateBack: () -> Unit, modifier: Modifier = Modifier) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val settings = uiState.settings
     var selectedPrayerId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -91,26 +89,26 @@ fun SettingsScreen(
                     Text(
                         text = "Settings",
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
                     )
                 },
                 navigationIcon = {
                     IconButton(
                         onClick = onNavigateBack,
-                        modifier = Modifier.testTag("btn_settings_back")
+                        modifier = Modifier.testTag("btn_settings_back"),
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back to Main Screen"
+                            contentDescription = "Back to Main Screen",
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground
-                )
+                    titleContentColor = MaterialTheme.colorScheme.onBackground,
+                ),
             )
-        }
+        },
     ) { innerPadding ->
         LazyColumn(
             modifier = Modifier
@@ -118,7 +116,7 @@ fun SettingsScreen(
                 .padding(innerPadding)
                 .testTag("settings_screen_list"),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 40.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+            verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             // 1. Theme & Appearance
             item {
@@ -126,7 +124,7 @@ fun SettingsScreen(
                     themeMode = settings.themeMode,
                     is24HourFormat = settings.is24HourFormat,
                     onThemeChange = { viewModel.updateThemeMode(it) },
-                    on24HourChange = { viewModel.updateIs24HourFormat(it) }
+                    on24HourChange = { viewModel.updateIs24HourFormat(it) },
                 )
             }
 
@@ -134,7 +132,7 @@ fun SettingsScreen(
             item {
                 CalculationSection(
                     selectedMethod = settings.calculationMethod,
-                    onMethodSelect = { viewModel.updateCalculationMethod(it) }
+                    onMethodSelect = { viewModel.updateCalculationMethod(it) },
                 )
             }
 
@@ -142,7 +140,7 @@ fun SettingsScreen(
             item {
                 JuristicSection(
                     selectedJuristic = settings.juristicMethod,
-                    onJuristicSelect = { viewModel.updateJuristicMethod(it) }
+                    onJuristicSelect = { viewModel.updateJuristicMethod(it) },
                 )
             }
 
@@ -159,7 +157,7 @@ fun SettingsScreen(
                     onTogglePrayerEnabled = { prayer, enabled ->
                         viewModel.updatePrayerAlertEnabled(prayer, enabled)
                     },
-                    onPlayPreview = { viewModel.playPreviewSound(it) }
+                    onPlayPreview = { viewModel.playPreviewSound(it) },
                 )
             }
 
@@ -180,7 +178,7 @@ fun SettingsScreen(
                     onOpenBatterySettings = {
                         val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
                         context.startActivity(intent)
-                    }
+                    },
                 )
             }
 
@@ -189,7 +187,7 @@ fun SettingsScreen(
                 LocationSection(
                     currentLocation = settings.currentLocation,
                     onRefreshGps = { viewModel.refreshGpsLocation() },
-                    onSelectPreset = { viewModel.selectPresetLocation(it) }
+                    onSelectPreset = { viewModel.selectPresetLocation(it) },
                 )
             }
 
@@ -199,7 +197,7 @@ fun SettingsScreen(
                     minuteOffsets = settings.minuteOffsets,
                     onUpdateOffset = { prayer, offset ->
                         viewModel.updatePrayerMinuteOffset(prayer, offset)
-                    }
+                    },
                 )
             }
         }
@@ -218,12 +216,12 @@ fun SettingsScreen(
                     Text(
                         text = "${prayer.displayName} Alert Sound",
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
                     )
                     Text(
                         text = "Choose notification sound or vibration mode",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             },
@@ -239,7 +237,7 @@ fun SettingsScreen(
                     },
                     onPlayPreview = { sound ->
                         viewModel.playPreviewSound(sound)
-                    }
+                    },
                 )
             },
             confirmButton = {
@@ -247,11 +245,11 @@ fun SettingsScreen(
                     onClick = {
                         if (uiState.isPlayingSound) viewModel.stopPreviewSound()
                         selectedPrayerId = null
-                    }
+                    },
                 ) {
                     Text("Done")
                 }
-            }
+            },
         )
     }
 }

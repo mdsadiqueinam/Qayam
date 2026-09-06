@@ -11,9 +11,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class AudioFocusManager @Inject constructor(
-    @ApplicationContext private val context: Context
-) {
+class AudioFocusManager @Inject constructor(@ApplicationContext private val context: Context) {
     private companion object {
         const val TAG = "AudioFocusManager"
     }
@@ -21,12 +19,16 @@ class AudioFocusManager @Inject constructor(
     private var focusRequest: Any? = null
     private var focusListener: AudioManager.OnAudioFocusChangeListener? = null
 
+    @Suppress("TooGenericExceptionCaught")
     fun requestAudioFocus(highPriorityAlarm: Boolean, onFocusLoss: () -> Unit): Boolean {
         return try {
             val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
                 ?: return false
-            val usage = if (highPriorityAlarm) AudioAttributes.USAGE_ALARM
-            else AudioAttributes.USAGE_NOTIFICATION
+            val usage = if (highPriorityAlarm) {
+                AudioAttributes.USAGE_ALARM
+            } else {
+                AudioAttributes.USAGE_NOTIFICATION
+            }
             val attrs = AudioAttributes.Builder()
                 .setUsage(usage)
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
@@ -35,7 +37,8 @@ class AudioFocusManager @Inject constructor(
             val listener = AudioManager.OnAudioFocusChangeListener { change ->
                 when (change) {
                     AudioManager.AUDIOFOCUS_LOSS,
-                    AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> onFocusLoss()
+                    AudioManager.AUDIOFOCUS_LOSS_TRANSIENT,
+                    -> onFocusLoss()
                 }
             }
             focusListener = listener
@@ -52,7 +55,7 @@ class AudioFocusManager @Inject constructor(
                 audioManager.requestAudioFocus(
                     listener,
                     if (highPriorityAlarm) AudioManager.STREAM_ALARM else AudioManager.STREAM_NOTIFICATION,
-                    AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE
+                    AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE,
                 )
             }
             res == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
@@ -62,6 +65,7 @@ class AudioFocusManager @Inject constructor(
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     fun abandonAudioFocus() {
         try {
             val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager

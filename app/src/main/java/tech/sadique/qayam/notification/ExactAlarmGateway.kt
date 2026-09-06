@@ -18,12 +18,12 @@ import javax.inject.Singleton
 @Singleton
 class ExactAlarmGateway @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val capabilities: AlarmCapabilities
+    private val capabilities: AlarmCapabilities,
 ) : AlarmScheduler {
 
     constructor(@ApplicationContext context: Context) : this(
         context,
-        AlarmCapabilities(context)
+        AlarmCapabilities(context),
     )
 
     private val alarmManager = context.getSystemService<AlarmManager>()
@@ -34,11 +34,12 @@ class ExactAlarmGateway @Inject constructor(
     }
 
     @SuppressLint("ScheduleExactAlarm")
+    @Suppress("TooGenericExceptionCaught")
     override fun setExactAlarm(
         prayer: PrayerType,
         triggerTimeMillis: Long,
         soundType: AdhanSoundType,
-        highPriority: Boolean
+        highPriority: Boolean,
     ) {
         if (alarmManager == null) return
 
@@ -54,7 +55,7 @@ class ExactAlarmGateway @Inject constructor(
             context,
             prayer.ordinal,
             intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
         val openAppIntent = Intent(context, MainActivity::class.java).apply {
@@ -65,7 +66,7 @@ class ExactAlarmGateway @Inject constructor(
             context,
             prayer.ordinal,
             openAppIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
         val canExact = capabilities.canScheduleExactAlarms()
@@ -78,7 +79,7 @@ class ExactAlarmGateway @Inject constructor(
                 alarmManager.setAndAllowWhileIdle(
                     AlarmManager.RTC_WAKEUP,
                     triggerTimeMillis,
-                    pendingIntent
+                    pendingIntent,
                 )
             }
             Log.d(TAG, "Alarm scheduled for ${prayer.displayName} at $triggerTimeMillis (exact: $canExact)")
@@ -88,7 +89,7 @@ class ExactAlarmGateway @Inject constructor(
                 alarmManager.setAndAllowWhileIdle(
                     AlarmManager.RTC_WAKEUP,
                     triggerTimeMillis,
-                    pendingIntent
+                    pendingIntent,
                 )
             } catch (fallbackEx: Exception) {
                 Log.e(TAG, "Failed to schedule fallback alarm", fallbackEx)
@@ -105,7 +106,7 @@ class ExactAlarmGateway @Inject constructor(
             context,
             prayer.ordinal,
             intent,
-            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE,
         )
         if (pendingIntent != null && alarmManager != null) {
             alarmManager.cancel(pendingIntent)
@@ -113,17 +114,13 @@ class ExactAlarmGateway @Inject constructor(
         }
     }
 
-    override fun scheduleTestAlarm(
-        delaySeconds: Int,
-        prayerType: PrayerType,
-        soundType: AdhanSoundType
-    ) {
+    override fun scheduleTestAlarm(delaySeconds: Int, prayerType: PrayerType, soundType: AdhanSoundType) {
         val triggerMillis = System.currentTimeMillis() + (delaySeconds * 1000L)
         setExactAlarm(
             prayer = prayerType,
             triggerTimeMillis = triggerMillis,
             soundType = soundType,
-            highPriority = true
+            highPriority = true,
         )
     }
 

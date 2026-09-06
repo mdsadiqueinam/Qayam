@@ -17,12 +17,7 @@ class FakeAudioPlayer : AudioPlayer {
     var playCount = 0
     var lastPlayedSound: AdhanSoundType? = null
 
-    override fun playSound(
-        soundType: AdhanSoundType,
-        highPriority: Boolean,
-        volume: Float,
-        onComplete: (() -> Unit)?
-    ) {
+    override fun playSound(soundType: AdhanSoundType, highPriority: Boolean, volume: Float, onComplete: (() -> Unit)?) {
         if (soundType == AdhanSoundType.SILENT || soundType == AdhanSoundType.VIBRATE_ONLY) {
             onComplete?.invoke()
             return

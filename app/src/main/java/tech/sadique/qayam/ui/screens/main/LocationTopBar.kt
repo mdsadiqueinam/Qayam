@@ -1,3 +1,5 @@
+@file:Suppress("FunctionNaming", "LongMethod")
+
 package tech.sadique.qayam.ui.screens.main
 
 import androidx.compose.foundation.clickable
@@ -37,12 +39,12 @@ fun LocationTopBar(
     isLoading: Boolean,
     onRefreshLocation: () -> Unit,
     onNavigateToSettings: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         // Location Chip
         Surface(
@@ -53,33 +55,33 @@ fun LocationTopBar(
                 .clickable(
                     role = Role.Button,
                     onClickLabel = "Refresh GPS location",
-                    onClick = onRefreshLocation
+                    onClick = onRefreshLocation,
                 )
-                .testTag("location_chip")
+                .testTag("location_chip"),
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 Icon(
                     imageVector = if (location.isGpsBased) Icons.Default.MyLocation else Icons.Default.LocationOn,
                     contentDescription = "Location",
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(18.dp),
                 )
                 Column {
                     Text(
                         text = location.cityName,
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Text(
                         text = if (location.isGpsBased) "GPS Location" else location.countryName,
                         style = MaterialTheme.typography.labelSmall,
                         fontSize = 10.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                     )
                 }
                 if (isLoading) {
@@ -88,14 +90,14 @@ fun LocationTopBar(
                             .size(16.dp)
                             .padding(start = 4.dp),
                         strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.primary,
                     )
                 } else {
                     Icon(
                         imageVector = Icons.Default.Refresh,
                         contentDescription = "Refresh Location",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                        modifier = Modifier.size(14.dp)
+                        modifier = Modifier.size(14.dp),
                     )
                 }
             }
@@ -105,17 +107,17 @@ fun LocationTopBar(
         Surface(
             shape = CircleShape,
             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
-            modifier = Modifier.size(44.dp)
+            modifier = Modifier.size(44.dp),
         ) {
             IconButton(
                 onClick = onNavigateToSettings,
-                modifier = Modifier.testTag("btn_settings")
+                modifier = Modifier.testTag("btn_settings"),
             ) {
                 Icon(
                     imageVector = Icons.Default.Settings,
                     contentDescription = "Settings",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(22.dp),
                 )
             }
         }

@@ -6,9 +6,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class AudioPreviewController @Inject constructor(
-    private val audioPlayer: AudioPlayer
-) {
+class AudioPreviewController @Inject constructor(private val audioPlayer: AudioPlayer) {
     val isPlayingSound: StateFlow<Boolean> = audioPlayer.isPlaying
     val playingSoundType: StateFlow<AdhanSoundType?> = audioPlayer.currentlyPlayingSound
 
@@ -19,7 +17,7 @@ class AudioPreviewController @Inject constructor(
             audioPlayer.playSound(
                 soundType = soundType,
                 highPriority = highPriority,
-                volume = 1.0f
+                volume = 1.0f,
             )
         }
     }

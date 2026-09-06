@@ -10,7 +10,7 @@ interface AudioPlayer {
         soundType: AdhanSoundType,
         highPriority: Boolean = true,
         volume: Float = 1.0f,
-        onComplete: (() -> Unit)? = null
+        onComplete: (() -> Unit)? = null,
     )
     fun stopSound()
 }

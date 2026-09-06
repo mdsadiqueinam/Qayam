@@ -2,15 +2,15 @@ package tech.sadique.qayam
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
-import tech.sadique.qayam.data.model.CalculationMethod
-import tech.sadique.qayam.data.model.PrayerType
-import tech.sadique.qayam.data.preferences.DataStoreSettingsRepository
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import tech.sadique.qayam.data.model.CalculationMethod
+import tech.sadique.qayam.data.model.PrayerType
+import tech.sadique.qayam.data.preferences.DataStoreSettingsRepository
 
 /** DataStore integration: write-then-read roundtrip (self-cleaning). */
 @RunWith(RobolectricTestRunner::class)

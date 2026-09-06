@@ -1,3 +1,5 @@
+@file:Suppress("FunctionNaming", "LongMethod")
+
 package tech.sadique.qayam.ui.screens
 
 import android.Manifest
@@ -24,7 +26,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -50,11 +51,7 @@ import tech.sadique.qayam.ui.viewmodel.PrayerViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainPrayerScreen(
-    viewModel: PrayerViewModel,
-    onNavigateToSettings: () -> Unit,
-    modifier: Modifier = Modifier
-) {
+fun MainPrayerScreen(viewModel: PrayerViewModel, onNavigateToSettings: () -> Unit, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val tickerState by viewModel.tickerState.collectAsStateWithLifecycle()
@@ -65,24 +62,24 @@ fun MainPrayerScreen(
 
     // Permission launchers
     val locationPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestMultiplePermissions()
+        contract = ActivityResultContracts.RequestMultiplePermissions(),
     ) { permissions ->
         val granted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
-                permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+            permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
         if (granted) {
             viewModel.refreshGpsLocation()
         }
     }
 
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
+        contract = ActivityResultContracts.RequestPermission(),
     ) { /* handled */ }
 
     LaunchedEffect(Unit) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(
                     context,
-                    Manifest.permission.POST_NOTIFICATIONS
+                    Manifest.permission.POST_NOTIFICATIONS,
                 ) != PackageManager.PERMISSION_GRANTED
             ) {
                 notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -91,18 +88,18 @@ fun MainPrayerScreen(
 
         val hasLocPerm = ContextCompat.checkSelfPermission(
             context,
-            Manifest.permission.ACCESS_FINE_LOCATION
+            Manifest.permission.ACCESS_FINE_LOCATION,
         ) == PackageManager.PERMISSION_GRANTED ||
             ContextCompat.checkSelfPermission(
                 context,
-                Manifest.permission.ACCESS_COARSE_LOCATION
+                Manifest.permission.ACCESS_COARSE_LOCATION,
             ) == PackageManager.PERMISSION_GRANTED
         if (!hasLocPerm) {
             locationPermissionLauncher.launch(
                 arrayOf(
                     Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.ACCESS_COARSE_LOCATION
-                )
+                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                ),
             )
         }
     }
@@ -116,9 +113,9 @@ fun MainPrayerScreen(
             AudioPlayingBanner(
                 isPlayingSound = uiState.isPlayingSound,
                 playingSoundType = uiState.playingSoundType,
-                onStopSound = { viewModel.stopPreviewSound() }
+                onStopSound = { viewModel.stopPreviewSound() },
             )
-        }
+        },
     ) { innerPadding ->
         LazyColumn(
             modifier = Modifier
@@ -126,7 +123,7 @@ fun MainPrayerScreen(
                 .padding(innerPadding)
                 .testTag("main_prayer_screen_list"),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 28.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             // 1. Top Bar with Location & Settings Button
             item {
@@ -135,10 +132,12 @@ fun MainPrayerScreen(
                     isLoading = uiState.isLocationLoading,
                     onRefreshLocation = {
                         val granted = ContextCompat.checkSelfPermission(
-                            context, Manifest.permission.ACCESS_FINE_LOCATION
+                            context,
+                            Manifest.permission.ACCESS_FINE_LOCATION,
                         ) == PackageManager.PERMISSION_GRANTED ||
                             ContextCompat.checkSelfPermission(
-                                context, Manifest.permission.ACCESS_COARSE_LOCATION
+                                context,
+                                Manifest.permission.ACCESS_COARSE_LOCATION,
                             ) == PackageManager.PERMISSION_GRANTED
                         if (granted) {
                             viewModel.refreshGpsLocation()
@@ -146,12 +145,12 @@ fun MainPrayerScreen(
                             locationPermissionLauncher.launch(
                                 arrayOf(
                                     Manifest.permission.ACCESS_FINE_LOCATION,
-                                    Manifest.permission.ACCESS_COARSE_LOCATION
-                                )
+                                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                                ),
                             )
                         }
                     },
-                    onNavigateToSettings = onNavigateToSettings
+                    onNavigateToSettings = onNavigateToSettings,
                 )
             }
 
@@ -159,7 +158,7 @@ fun MainPrayerScreen(
             item {
                 DateSubtitleItem(
                     currentTimeMillis = tickerState.currentTimeMillis,
-                    calculationTitle = uiState.settings.calculationMethod.title.substringBefore('(')
+                    calculationTitle = uiState.settings.calculationMethod.title.substringBefore('('),
                 )
             }
 
@@ -167,7 +166,7 @@ fun MainPrayerScreen(
             item {
                 HeroItem(
                     tickerState = tickerState,
-                    is24Hour = uiState.settings.is24HourFormat
+                    is24Hour = uiState.settings.is24HourFormat,
                 )
             }
 
@@ -175,7 +174,7 @@ fun MainPrayerScreen(
             item {
                 CountdownItem(
                     currentState = tickerState.currentState,
-                    is24Hour = uiState.settings.is24HourFormat
+                    is24Hour = uiState.settings.is24HourFormat,
                 )
             }
 
@@ -186,20 +185,20 @@ fun MainPrayerScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 4.dp, vertical = 4.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
                         text = "Today's Prayers",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.semantics { heading() }
+                        modifier = Modifier.semantics { heading() },
                     )
                     Text(
                         text = uiState.settings.juristicMethod.title.substringBefore('(').trim(),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.primary,
                     )
                 }
             }
@@ -216,7 +215,7 @@ fun MainPrayerScreen(
                     onToggleAlert = { prayer, enabled ->
                         viewModel.updatePrayerAlertEnabled(prayer, enabled)
                     },
-                    onSoundClick = { prayer -> selectedPrayerId = prayer.id }
+                    onSoundClick = { prayer -> selectedPrayerId = prayer.id },
                 )
             }
         }
@@ -242,7 +241,7 @@ fun MainPrayerScreen(
             onPlayPreview = { sound ->
                 viewModel.playPreviewSound(sound)
             },
-            onDismiss = { selectedPrayerId = null }
+            onDismiss = { selectedPrayerId = null },
         )
     }
 }

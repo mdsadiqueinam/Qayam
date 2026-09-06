@@ -16,6 +16,10 @@ import javax.inject.Inject
 
 class TickerManager @Inject constructor() {
 
+    companion object {
+        private const val ONE_SECOND_MS = 1000L
+    }
+
     private val _tickerState = MutableStateFlow(PrayerTickerState())
     val tickerState: StateFlow<PrayerTickerState> = _tickerState.asStateFlow()
 
@@ -28,7 +32,7 @@ class TickerManager @Inject constructor() {
                 val (schedule, loc) = stateProvider()
                 refreshTicker(schedule, loc, Calendar.getInstance())
                 val now = System.currentTimeMillis()
-                delay(1000 - (now % 1000))
+                delay(ONE_SECOND_MS - (now % ONE_SECOND_MS))
             }
         }
     }
@@ -39,12 +43,14 @@ class TickerManager @Inject constructor() {
                 currentTime = now,
                 schedule = schedule,
                 latitude = loc.latitude,
-                longitude = loc.longitude
+                longitude = loc.longitude,
             )
-        } else null
+        } else {
+            null
+        }
         _tickerState.value = PrayerTickerState(
             currentTimeMillis = now.timeInMillis,
-            currentState = currentState
+            currentState = currentState,
         )
     }
 

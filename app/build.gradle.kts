@@ -1,3 +1,5 @@
+import dev.detekt.gradle.Detekt
+
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.compose)
@@ -60,10 +62,18 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
 }
 
 detekt {
-  buildUponDefaultConfig = true
-  allRules = false
+  toolVersion = "2.0.0-alpha.6"
   config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
-  baseline = file("$rootDir/config/detekt/baseline.xml")
+  buildUponDefaultConfig = true
+}
+
+tasks.withType<Detekt>().configureEach {
+  reports {
+    checkstyle.required.set(true)
+    html.required.set(true)
+    sarif.required.set(true)
+    markdown.required.set(true)
+  }
 }
 
 tasks.matching { it.name.startsWith("detekt") }.configureEach {
@@ -75,21 +85,6 @@ tasks.matching { it.name.startsWith("detekt") }.configureEach {
   doLast {
     originalJavaVersion?.let { System.setProperty("java.version", it) }
   }
-}
-
-tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
-  jvmTarget = "17"
-  reports {
-    html.required.set(true)
-    xml.required.set(true)
-    txt.required.set(false)
-    sarif.required.set(false)
-    md.required.set(false)
-  }
-}
-
-tasks.withType<io.gitlab.arturbosch.detekt.DetektCreateBaselineTask>().configureEach {
-  jvmTarget = "17"
 }
 
 

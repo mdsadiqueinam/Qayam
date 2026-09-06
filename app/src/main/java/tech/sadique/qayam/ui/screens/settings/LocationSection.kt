@@ -1,3 +1,5 @@
+@file:Suppress("FunctionNaming", "LongMethod")
+
 package tech.sadique.qayam.ui.screens.settings
 
 import androidx.compose.foundation.layout.Arrangement
@@ -32,40 +34,44 @@ fun LocationSection(
     currentLocation: LocationInfo,
     onRefreshGps: () -> Unit,
     onSelectPreset: (LocationInfo) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     SettingsSectionCard(
         title = "Location & Offline Presets",
         icon = Icons.Default.LocationCity,
-        modifier = modifier
+        modifier = modifier,
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Current Coordinates",
                         style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
                     )
                     Text(
-                        text = "${currentLocation.cityName} (${String.format(Locale.US, "%.2f", currentLocation.latitude)}°, ${String.format(Locale.US, "%.2f", currentLocation.longitude)}°)",
+                        text = "${currentLocation.cityName} (${String.format(
+                            Locale.US,
+                            "%.2f",
+                            currentLocation.latitude,
+                        )}°, ${String.format(Locale.US, "%.2f", currentLocation.longitude)}°)",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.primary,
                     )
                 }
 
                 IconButton(
                     onClick = onRefreshGps,
-                    modifier = Modifier.testTag("btn_refresh_gps_settings")
+                    modifier = Modifier.testTag("btn_refresh_gps_settings"),
                 ) {
                     Icon(
                         imageVector = Icons.Default.MyLocation,
                         contentDescription = "Get GPS Location",
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = MaterialTheme.colorScheme.primary,
                     )
                 }
             }
@@ -73,12 +79,12 @@ fun LocationSection(
             Text(
                 text = "Quick Offline City Presets (1-tap setup):",
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 items(CityPresets.LIST) { preset ->
                     val isCurrentCity = currentLocation.cityName.equals(preset.cityName, ignoreCase = true)
@@ -88,11 +94,13 @@ fun LocationSection(
                         label = { Text(preset.cityName) },
                         leadingIcon = if (isCurrentCity) {
                             { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                        } else null,
+                        } else {
+                            null
+                        },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        ),
                     )
                 }
             }

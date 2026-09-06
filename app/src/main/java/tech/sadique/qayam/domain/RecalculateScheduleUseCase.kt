@@ -10,10 +10,7 @@ import javax.inject.Singleton
 @Singleton
 class RecalculateScheduleUseCase @Inject constructor() {
 
-    operator fun invoke(
-        settings: UserSettings,
-        now: Calendar = Calendar.getInstance()
-    ): PrayerSchedule {
+    operator fun invoke(settings: UserSettings, now: Calendar = Calendar.getInstance()): PrayerSchedule {
         val loc = settings.currentLocation
         val tzOffset = now.timeZone.getOffset(now.timeInMillis) / 3600000.0
 
@@ -25,7 +22,7 @@ class RecalculateScheduleUseCase @Inject constructor() {
             method = settings.calculationMethod,
             juristic = settings.juristicMethod,
             highLatitudeRule = settings.highLatitudeRule,
-            minuteOffsets = settings.minuteOffsets
+            minuteOffsets = settings.minuteOffsets,
         )
     }
 }

@@ -2,11 +2,6 @@ package tech.sadique.qayam
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
-import tech.sadique.qayam.data.calculator.PrayerTimeCalculator
-import tech.sadique.qayam.data.model.CalculationMethod
-import tech.sadique.qayam.data.model.HighLatitudeRule
-import tech.sadique.qayam.data.model.JuristicMethod
-import tech.sadique.qayam.data.model.PrayerType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -15,6 +10,11 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import tech.sadique.qayam.data.calculator.PrayerTimeCalculator
+import tech.sadique.qayam.data.model.CalculationMethod
+import tech.sadique.qayam.data.model.HighLatitudeRule
+import tech.sadique.qayam.data.model.JuristicMethod
+import tech.sadique.qayam.data.model.PrayerType
 import java.util.Calendar
 
 @RunWith(RobolectricTestRunner::class)
@@ -41,7 +41,7 @@ class ExampleRobolectricTest {
             timezoneOffsetHours = 3.0,
             method = CalculationMethod.UMM_AL_QURA,
             juristic = JuristicMethod.STANDARD,
-            highLatitudeRule = HighLatitudeRule.ANGLE_BASED
+            highLatitudeRule = HighLatitudeRule.ANGLE_BASED,
         )
 
         assertNotNull(schedule)
@@ -84,7 +84,7 @@ class ExampleRobolectricTest {
         val notification = notificationManager.buildPrayerNotification(
             prayerType = PrayerType.FAJR,
             soundType = tech.sadique.qayam.data.model.AdhanSoundType.MAKKAH,
-            highPriority = true
+            highPriority = true,
         )
 
         assertNotNull(notification)
@@ -101,7 +101,7 @@ class ExampleRobolectricTest {
         val notification = notificationManager.buildPrayerNotification(
             prayerType = PrayerType.DHUHR,
             soundType = tech.sadique.qayam.data.model.AdhanSoundType.SILENT,
-            highPriority = true
+            highPriority = true,
         )
 
         assertNotNull(notification)
@@ -117,7 +117,7 @@ class ExampleRobolectricTest {
         val notification = notificationManager.buildPrayerNotification(
             prayerType = PrayerType.ASR,
             soundType = tech.sadique.qayam.data.model.AdhanSoundType.VIBRATE_ONLY,
-            highPriority = true
+            highPriority = true,
         )
 
         assertNotNull(notification)

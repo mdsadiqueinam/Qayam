@@ -1,3 +1,5 @@
+@file:Suppress("FunctionNaming")
+
 package tech.sadique.qayam.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -26,7 +28,7 @@ private val LightColorScheme = lightColorScheme(
     surfaceVariant = SandSurfaceVariant,
     onSurfaceVariant = Color(0xFF404944),
     outline = Color(0xFF707973),
-    outlineVariant = Color(0xFFC0C9C2)
+    outlineVariant = Color(0xFFC0C9C2),
 )
 
 private val DarkColorScheme = darkColorScheme(
@@ -47,7 +49,7 @@ private val DarkColorScheme = darkColorScheme(
     surfaceVariant = DarkSurfaceVariant,
     onSurfaceVariant = Color(0xFFBFC9C2),
     outline = Color(0xFF89938D),
-    outlineVariant = Color(0xFF404944)
+    outlineVariant = Color(0xFF404944),
 )
 
 private val NightMosqueColorScheme = darkColorScheme(
@@ -68,14 +70,11 @@ private val NightMosqueColorScheme = darkColorScheme(
     surfaceVariant = MosqueSurfaceVariant,
     onSurfaceVariant = Color(0xFFBCC7C1),
     outline = Color(0xFF84938B),
-    outlineVariant = Color(0xFF284841)
+    outlineVariant = Color(0xFF284841),
 )
 
 @Composable
-fun SalahTheme(
-    themeMode: AppThemeMode = AppThemeMode.SYSTEM,
-    content: @Composable () -> Unit
-) {
+fun SalahTheme(themeMode: AppThemeMode = AppThemeMode.SYSTEM, content: @Composable () -> Unit) {
     // Brand-only schemes (no dynamic color): the emerald/gold identity is
     // intentional across all modes, including Android 12+.
     val systemDark = isSystemInDarkTheme()
@@ -90,6 +89,6 @@ fun SalahTheme(
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
-        content = content
+        content = content,
     )
 }

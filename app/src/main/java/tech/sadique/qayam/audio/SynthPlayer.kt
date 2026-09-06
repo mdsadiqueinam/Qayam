@@ -1,3 +1,11 @@
+@file:Suppress(
+    "CyclomaticComplexMethod",
+    "LongMethod",
+    "LoopWithTooManyJumpStatements",
+    "TooGenericExceptionCaught",
+    "MagicNumber",
+)
+
 package tech.sadique.qayam.audio
 
 import android.media.AudioAttributes
@@ -25,16 +33,11 @@ class SynthPlayer @Inject constructor() {
     val isPlaying: Boolean
         get() = activeAudioTrack?.playState == AudioTrack.PLAYSTATE_PLAYING
 
-    fun play(
-        notes: List<Note>,
-        highPriorityAlarm: Boolean,
-        volumeMultiplier: Float,
-        scope: CoroutineScope
-    ) {
+    fun play(notes: List<Note>, highPriorityAlarm: Boolean, volumeMultiplier: Float, scope: CoroutineScope) {
         val minBufferSize = AudioTrack.getMinBufferSize(
             SAMPLE_RATE,
             AudioFormat.CHANNEL_OUT_MONO,
-            AudioFormat.ENCODING_PCM_16BIT
+            AudioFormat.ENCODING_PCM_16BIT,
         )
         val bufferSize = maxOf(minBufferSize, SAMPLE_RATE * 2)
 

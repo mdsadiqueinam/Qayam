@@ -5,13 +5,13 @@ import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.mutablePreferencesOf
 import androidx.datastore.preferences.core.stringPreferencesKey
+import org.junit.Assert.assertEquals
+import org.junit.Test
 import tech.sadique.qayam.data.model.AdhanSoundType
 import tech.sadique.qayam.data.model.CalculationMethod
 import tech.sadique.qayam.data.model.JuristicMethod
 import tech.sadique.qayam.data.model.PrayerType
 import tech.sadique.qayam.data.preferences.toUserSettings
-import org.junit.Assert.assertEquals
-import org.junit.Test
 
 /** Pure mapping tests: defaults + explicitly stored values. */
 class PreferencesMappingTest {
@@ -26,7 +26,7 @@ class PreferencesMappingTest {
         assertEquals("Makkah", s.currentLocation.cityName)
         assertEquals(
             PrayerType.dailyPrayers.associateWith { it.defaultAlertEnabled },
-            s.prayerAlertEnabled
+            s.prayerAlertEnabled,
         )
         assertEquals(AdhanSoundType.SILENT, s.prayerAlertSounds[PrayerType.SUNRISE])
     }
@@ -42,7 +42,7 @@ class PreferencesMappingTest {
             stringPreferencesKey("loc_country") to "Egypt",
             booleanPreferencesKey("enabled_${PrayerType.SUNRISE.id}") to true,
             intPreferencesKey("offset_${PrayerType.FAJR.id}") to 5,
-            stringPreferencesKey("sound_${PrayerType.ASR.id}") to AdhanSoundType.MADINAH.id
+            stringPreferencesKey("sound_${PrayerType.ASR.id}") to AdhanSoundType.MADINAH.id,
         ).toUserSettings()
         assertEquals(CalculationMethod.EGYPT, s.calculationMethod)
         assertEquals(JuristicMethod.HANAFI, s.juristicMethod)

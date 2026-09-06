@@ -3,6 +3,11 @@ package tech.sadique.qayam
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import tech.sadique.qayam.data.model.AdhanSoundType
 import tech.sadique.qayam.data.model.AppThemeMode
 import tech.sadique.qayam.data.model.CalculationMethod
@@ -10,11 +15,6 @@ import tech.sadique.qayam.data.model.HighLatitudeRule
 import tech.sadique.qayam.data.model.JuristicMethod
 import tech.sadique.qayam.data.model.PrayerType
 import tech.sadique.qayam.data.preferences.DataStoreSettingsRepository
-import org.junit.Assert.assertEquals
-import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36])

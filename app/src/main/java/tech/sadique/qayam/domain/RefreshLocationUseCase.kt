@@ -11,7 +11,7 @@ import javax.inject.Singleton
 class RefreshLocationUseCase @Inject constructor(
     private val locationProvider: LocationProvider,
     private val geocoderService: GeocoderService,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
 ) {
     suspend operator fun invoke(): Result<LocationInfo> {
         val coords = locationProvider.getCurrentLocation()
@@ -25,7 +25,7 @@ class RefreshLocationUseCase @Inject constructor(
             cityName = cityInfo.first,
             countryName = cityInfo.second,
             isGpsBased = true,
-            lastUpdatedMillis = System.currentTimeMillis()
+            lastUpdatedMillis = System.currentTimeMillis(),
         )
         settingsRepository.updateLocation(gpsLoc)
         return Result.success(gpsLoc)

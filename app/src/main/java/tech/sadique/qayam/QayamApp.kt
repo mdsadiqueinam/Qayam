@@ -39,6 +39,7 @@ class QayamApp : Application() {
         armUpcomingAlarms()
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private fun armUpcomingAlarms() {
         applicationScope.launch {
             try {

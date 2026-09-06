@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import tech.sadique.qayam.audio.AudioPlayer
 import tech.sadique.qayam.data.model.AdhanSoundType
 import tech.sadique.qayam.data.model.PrayerType
@@ -15,8 +17,6 @@ import tech.sadique.qayam.notification.ExactAlarmGateway
 import tech.sadique.qayam.notification.PrayerNotificationNotifier
 import tech.sadique.qayam.notification.SchedulePrayerAlarmsUseCase
 import tech.sadique.qayam.service.AdhanPlaybackService
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -82,13 +82,16 @@ class AdhanAlarmReceiver : BroadcastReceiver() {
                             context = context.applicationContext,
                             prayerType = prayerType,
                             soundType = soundType,
-                            highPriority = highPriority
+                            highPriority = highPriority,
                         )
                     } else {
                         if (alarmScheduler.areNotificationsEnabled()) {
                             notifier.showPrayerNotification(prayerType, soundType, highPriority)
                         } else {
-                            Log.w("AdhanReceiver", "POST_NOTIFICATIONS denied; skipping visual alert for ${prayerType.id}")
+                            Log.w(
+                                "AdhanReceiver",
+                                "POST_NOTIFICATIONS denied; skipping visual alert for ${prayerType.id}",
+                            )
                         }
                     }
                 }

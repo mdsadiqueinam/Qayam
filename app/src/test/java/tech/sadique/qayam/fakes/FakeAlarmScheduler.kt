@@ -10,7 +10,7 @@ class FakeAlarmScheduler : AlarmScheduler {
         val prayer: PrayerType,
         val triggerTimeMillis: Long,
         val soundType: AdhanSoundType,
-        val highPriority: Boolean
+        val highPriority: Boolean,
     )
 
     val scheduledAlarms = mutableMapOf<PrayerType, ScheduledAlarm>()
@@ -24,7 +24,7 @@ class FakeAlarmScheduler : AlarmScheduler {
         prayer: PrayerType,
         triggerTimeMillis: Long,
         soundType: AdhanSoundType,
-        highPriority: Boolean
+        highPriority: Boolean,
     ) {
         scheduledAlarms[prayer] = ScheduledAlarm(prayer, triggerTimeMillis, soundType, highPriority)
     }
@@ -34,11 +34,7 @@ class FakeAlarmScheduler : AlarmScheduler {
         cancelledAlarms.add(prayer)
     }
 
-    override fun scheduleTestAlarm(
-        delaySeconds: Int,
-        prayerType: PrayerType,
-        soundType: AdhanSoundType
-    ) {
+    override fun scheduleTestAlarm(delaySeconds: Int, prayerType: PrayerType, soundType: AdhanSoundType) {
         testAlarmScheduled = delaySeconds to prayerType
     }
 

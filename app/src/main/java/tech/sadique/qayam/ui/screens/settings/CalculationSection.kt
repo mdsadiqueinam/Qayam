@@ -1,3 +1,5 @@
+@file:Suppress("FunctionNaming", "LongMethod")
+
 package tech.sadique.qayam.ui.screens.settings
 
 import androidx.compose.foundation.clickable
@@ -27,18 +29,18 @@ import tech.sadique.qayam.data.model.CalculationMethod
 fun CalculationSection(
     selectedMethod: CalculationMethod,
     onMethodSelect: (CalculationMethod) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     SettingsSectionCard(
         title = "Calculation Method",
         icon = Icons.Default.Calculate,
-        modifier = modifier
+        modifier = modifier,
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
                 text = "Standard calculation parameters for Fajr & Isha angles",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
             CalculationMethod.entries.forEach { method ->
@@ -50,33 +52,40 @@ fun CalculationSection(
                         .clickable { onMethodSelect(method) }
                         .testTag("calc_method_${method.id}"),
                     shape = RoundedCornerShape(12.dp),
-                    color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
-                    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
+                    color = if (isSelected) {
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
+                    },
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 14.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = method.title,
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
-                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                color = if (isSelected) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface
+                                },
                             )
                             Text(
                                 text = method.subtitle,
                                 style = MaterialTheme.typography.bodySmall,
                                 fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                         RadioButton(
                             selected = isSelected,
-                            onClick = { onMethodSelect(method) }
+                            onClick = { onMethodSelect(method) },
                         )
                     }
                 }

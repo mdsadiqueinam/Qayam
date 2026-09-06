@@ -32,7 +32,7 @@ data class PrayerUiState(
     val isLocationLoading: Boolean = false,
     val locationErrorMessage: String? = null,
     val isPlayingSound: Boolean = false,
-    val playingSoundType: AdhanSoundType? = null
+    val playingSoundType: AdhanSoundType? = null,
 )
 
 /**
@@ -42,10 +42,11 @@ data class PrayerUiState(
  */
 data class PrayerTickerState(
     val currentTimeMillis: Long = System.currentTimeMillis(),
-    val currentState: CurrentPrayerState? = null
+    val currentState: CurrentPrayerState? = null,
 )
 
 @HiltViewModel
+@Suppress("TooManyFunctions")
 class PrayerViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val schedulePrayerAlarmsUseCase: SchedulePrayerAlarmsUseCase,
@@ -53,7 +54,7 @@ class PrayerViewModel @Inject constructor(
     private val recalculateScheduleUseCase: RecalculateScheduleUseCase,
     private val refreshLocationUseCase: RefreshLocationUseCase,
     private val audioPreviewController: AudioPreviewController,
-    private val tickerManager: TickerManager
+    private val tickerManager: TickerManager,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PrayerUiState())
@@ -108,7 +109,7 @@ class PrayerViewModel @Inject constructor(
             } else {
                 _uiState.value = _uiState.value.copy(
                     isLocationLoading = false,
-                    locationErrorMessage = "GPS unavailable. Using cached coordinates."
+                    locationErrorMessage = "GPS unavailable. Using cached coordinates.",
                 )
             }
         }
@@ -172,7 +173,7 @@ class PrayerViewModel @Inject constructor(
         alarmScheduler.scheduleTestAlarm(
             delaySeconds = delaySeconds,
             prayerType = nextPrayer,
-            soundType = soundType
+            soundType = soundType,
         )
     }
 

@@ -20,6 +20,6 @@ object CityPresets {
         LocationInfo(43.6532, -79.3832, 76.0, "Toronto", "Canada", isGpsBased = false),
         LocationInfo(48.8566, 2.3522, 35.0, "Paris", "France", isGpsBased = false),
         LocationInfo(1.3521, 103.8198, 15.0, "Singapore", "Singapore", isGpsBased = false),
-        LocationInfo(-33.8688, 151.2093, 3.0, "Sydney", "Australia", isGpsBased = false)
+        LocationInfo(-33.8688, 151.2093, 3.0, "Sydney", "Australia", isGpsBased = false),
     )
 }

@@ -7,7 +7,6 @@ import tech.sadique.qayam.data.model.JuristicMethod
 import tech.sadique.qayam.data.model.PrayerSchedule
 import tech.sadique.qayam.data.model.PrayerType
 import java.util.Calendar
-import java.util.TimeZone
 import kotlin.math.abs
 import kotlin.math.acos
 import kotlin.math.asin
@@ -15,11 +14,11 @@ import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.max
-import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.tan
 
+@Suppress("MagicNumber", "LongMethod", "CyclomaticComplexMethod", "TooManyFunctions")
 object PrayerTimeCalculator {
 
     private const val RAD = Math.PI / 180.0
@@ -77,7 +76,13 @@ object PrayerTimeCalculator {
      */
     private fun hourAngle(altitude: Double, latitude: Double, declination: Double): Double {
         val cosH = (dSin(altitude) - dSin(latitude) * dSin(declination)) / (dCos(latitude) * dCos(declination))
-        return if (cosH < -1.0) 180.0 else if (cosH > 1.0) 0.0 else dAcos(cosH)
+        return if (cosH < -1.0) {
+            180.0
+        } else if (cosH > 1.0) {
+            0.0
+        } else {
+            dAcos(cosH)
+        }
     }
 
     /**
@@ -91,7 +96,7 @@ object PrayerTimeCalculator {
         method: CalculationMethod,
         juristic: JuristicMethod,
         highLatitudeRule: HighLatitudeRule = HighLatitudeRule.ANGLE_BASED,
-        minuteOffsets: Map<PrayerType, Int> = emptyMap()
+        minuteOffsets: Map<PrayerType, Int> = emptyMap(),
     ): PrayerSchedule {
         val year = date.get(Calendar.YEAR)
         val month = date.get(Calendar.MONTH) + 1
@@ -211,7 +216,7 @@ object PrayerTimeCalculator {
             gurubAftab = toCalendar(gurubTransit, minuteOffsets[PrayerType.GURUB_E_AFTAB] ?: 0),
             maghrib = toCalendar(maghribTransit, minuteOffsets[PrayerType.MAGHRIB] ?: 0),
             isha = toCalendar(ishaTransit, minuteOffsets[PrayerType.ISHA] ?: 0),
-            midnight = toCalendar(midnightTransit, 0)
+            midnight = toCalendar(midnightTransit, 0),
         )
     }
 
@@ -223,7 +228,7 @@ object PrayerTimeCalculator {
         currentTime: Calendar,
         schedule: PrayerSchedule,
         latitude: Double,
-        longitude: Double
+        longitude: Double,
     ): CurrentPrayerState {
         val nowMillis = currentTime.timeInMillis
         val tz = currentTime.timeZone
@@ -240,9 +245,12 @@ object PrayerTimeCalculator {
         val sun = sunPosition(jd)
 
         // Solar altitude calculation: sin(alt) = sin(lat)*sin(dec) + cos(lat)*cos(dec)*cos(H)
-        val localSolarTime = (hour + minute / 60.0 + second / 3600.0) - offsetHours + longitude / 15.0 + sun.equationOfTime
+        val localSolarTime =
+            (hour + minute / 60.0 + second / 3600.0) - offsetHours + longitude / 15.0 + sun.equationOfTime
         val hourAngleDeg = (localSolarTime - 12.0) * 15.0
-        val sinAlt = dSin(latitude) * dSin(sun.declination) + dCos(latitude) * dCos(sun.declination) * dCos(hourAngleDeg)
+        val sinAlt = dSin(
+            latitude,
+        ) * dSin(sun.declination) + dCos(latitude) * dCos(sun.declination) * dCos(hourAngleDeg)
         val sunAltitude = dAsin(sinAlt)
 
         val fajrTime = schedule.fajr.timeInMillis
@@ -268,6 +276,7 @@ object PrayerTimeCalculator {
                 windowStart = schedule.isha.timeInMillis - 24 * 3600 * 1000L
                 windowEnd = fajrTime
             }
+
             nowMillis < sunriseTime -> {
                 currentPrayer = PrayerType.FAJR
                 nextPrayer = PrayerType.SUNRISE
@@ -275,6 +284,7 @@ object PrayerTimeCalculator {
                 windowStart = fajrTime
                 windowEnd = sunriseTime
             }
+
             nowMillis < israqTime -> {
                 currentPrayer = PrayerType.SUNRISE
                 nextPrayer = PrayerType.ISRAQ
@@ -282,6 +292,7 @@ object PrayerTimeCalculator {
                 windowStart = sunriseTime
                 windowEnd = israqTime
             }
+
             nowMillis < dhuhrTime -> {
                 currentPrayer = PrayerType.ISRAQ
                 nextPrayer = PrayerType.DHUHR
@@ -289,6 +300,7 @@ object PrayerTimeCalculator {
                 windowStart = israqTime
                 windowEnd = dhuhrTime
             }
+
             nowMillis < asrTime -> {
                 currentPrayer = PrayerType.DHUHR
                 nextPrayer = PrayerType.ASR
@@ -296,6 +308,7 @@ object PrayerTimeCalculator {
                 windowStart = dhuhrTime
                 windowEnd = asrTime
             }
+
             nowMillis < gurubTime -> {
                 currentPrayer = PrayerType.ASR
                 nextPrayer = PrayerType.GURUB_E_AFTAB
@@ -303,6 +316,7 @@ object PrayerTimeCalculator {
                 windowStart = asrTime
                 windowEnd = gurubTime
             }
+
             nowMillis < maghribTime -> {
                 currentPrayer = PrayerType.GURUB_E_AFTAB
                 nextPrayer = PrayerType.MAGHRIB
@@ -310,6 +324,7 @@ object PrayerTimeCalculator {
                 windowStart = gurubTime
                 windowEnd = maghribTime
             }
+
             nowMillis < ishaTime -> {
                 currentPrayer = PrayerType.MAGHRIB
                 nextPrayer = PrayerType.ISHA
@@ -317,6 +332,7 @@ object PrayerTimeCalculator {
                 windowStart = maghribTime
                 windowEnd = ishaTime
             }
+
             else -> {
                 currentPrayer = PrayerType.ISHA
                 nextPrayer = PrayerType.FAJR
@@ -355,7 +371,7 @@ object PrayerTimeCalculator {
             progressInWindow = progress,
             sunAltitudeDegrees = sunAltitude,
             sunProgressPercent = sunProgressPercent,
-            isDaytime = isDaytime
+            isDaytime = isDaytime,
         )
     }
 }

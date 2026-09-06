@@ -5,11 +5,11 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import tech.sadique.qayam.data.preferences.SettingsRepository
 import tech.sadique.qayam.di.ApplicationScope
 import tech.sadique.qayam.notification.SchedulePrayerAlarmsUseCase
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -27,12 +27,14 @@ class BootReceiver : BroadcastReceiver() {
 
     companion object {
         private const val TAG = "BootReceiver"
+
         // AlarmManager exact-alarm permission change (API 31+); kept as string to
         // avoid referencing S-only constants from all code paths.
         private const val ACTION_SCHEDULE_EXACT_ALARM_STATE_CHANGED =
             "android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED"
     }
 
+    @Suppress("TooGenericExceptionCaught")
     override fun onReceive(context: Context, intent: Intent) {
         val action = intent.action ?: return
         Log.d(TAG, "Boot or Time changed action received: $action. Rescheduling alarms...")
@@ -44,7 +46,8 @@ class BootReceiver : BroadcastReceiver() {
             "android.intent.action.TIME_SET",
             Intent.ACTION_TIMEZONE_CHANGED,
             Intent.ACTION_USER_UNLOCKED,
-            ACTION_SCHEDULE_EXACT_ALARM_STATE_CHANGED -> {
+            ACTION_SCHEDULE_EXACT_ALARM_STATE_CHANGED,
+            -> {
                 val pendingResult = goAsync()
                 receiverScope.launch {
                     try {

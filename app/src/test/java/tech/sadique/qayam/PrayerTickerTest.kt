@@ -63,20 +63,21 @@ class PrayerTickerTest {
         val tickerManager = TickerManager()
 
         val store = ViewModelStore()
-        val vm = ViewModelProvider(store, object : ViewModelProvider.Factory {
-            @Suppress("UNCHECKED_CAST")
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return PrayerViewModel(
+        val vm = ViewModelProvider(
+            store,
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T = PrayerViewModel(
                     settingsRepository = fakeRepo,
                     schedulePrayerAlarmsUseCase = scheduleAlarmsUseCase,
                     alarmScheduler = fakeScheduler,
                     recalculateScheduleUseCase = recalculateScheduleUseCase,
                     refreshLocationUseCase = refreshLocationUseCase,
                     audioPreviewController = audioPreviewController,
-                    tickerManager = tickerManager
+                    tickerManager = tickerManager,
                 ) as T
-            }
-        })[PrayerViewModel::class.java]
+            },
+        )[PrayerViewModel::class.java]
         return vm to store
     }
 

@@ -21,7 +21,7 @@ data class UserSettings(
         longitude = 39.8262,
         cityName = "Makkah",
         countryName = "Saudi Arabia",
-        isGpsBased = false
+        isGpsBased = false,
     ),
     val prayerAlertSounds: Map<PrayerType, AdhanSoundType> = mapOf(
         PrayerType.FAJR to AdhanSoundType.MAKKAH,
@@ -31,7 +31,7 @@ data class UserSettings(
         PrayerType.ASR to AdhanSoundType.MADINAH,
         PrayerType.GURUB_E_AFTAB to AdhanSoundType.SILENT,
         PrayerType.MAGHRIB to AdhanSoundType.AL_AQSA,
-        PrayerType.ISHA to AdhanSoundType.MAKKAH
+        PrayerType.ISHA to AdhanSoundType.MAKKAH,
     ),
     val prayerAlertEnabled: Map<PrayerType, Boolean> = PrayerType.dailyPrayers.associateWith { it.defaultAlertEnabled },
     val minuteOffsets: Map<PrayerType, Int> = mapOf(
@@ -42,6 +42,6 @@ data class UserSettings(
         PrayerType.ASR to 0,
         PrayerType.GURUB_E_AFTAB to 0,
         PrayerType.MAGHRIB to 0,
-        PrayerType.ISHA to 0
-    )
+        PrayerType.ISHA to 0,
+    ),
 )

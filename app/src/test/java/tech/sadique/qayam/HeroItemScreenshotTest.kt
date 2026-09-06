@@ -56,13 +56,13 @@ class HeroItemScreenshotTest {
             longitude = 39.8262,
             timezoneOffsetHours = 3.0,
             method = CalculationMethod.MUSLIM_WORLD_LEAGUE,
-            juristic = JuristicMethod.STANDARD
+            juristic = JuristicMethod.STANDARD,
         )
         val state = PrayerTimeCalculator.calculateCurrentState(
             currentTime = date,
             schedule = schedule,
             latitude = 21.4225,
-            longitude = 39.8262
+            longitude = 39.8262,
         )
         return MutableStateFlow(PrayerTickerState(date.timeInMillis, state))
     }

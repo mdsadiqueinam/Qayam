@@ -1,3 +1,5 @@
+@file:Suppress("FunctionNaming", "LongMethod")
+
 package tech.sadique.qayam.ui.screens.main
 
 import androidx.compose.foundation.background
@@ -42,22 +44,21 @@ import java.util.Date
 import java.util.Locale
 
 @Composable
-fun HeroItem(
-    tickerState: PrayerTickerState,
-    is24Hour: Boolean,
-    modifier: Modifier = Modifier
-) {
+fun HeroItem(tickerState: PrayerTickerState, is24Hour: Boolean, modifier: Modifier = Modifier) {
     val state = tickerState.currentState
     val timeFormatter = remember(is24Hour) {
-        if (is24Hour) SimpleDateFormat("HH:mm:ss", Locale.getDefault())
-        else SimpleDateFormat("h:mm:ss a", Locale.getDefault())
+        if (is24Hour) {
+            SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+        } else {
+            SimpleDateFormat("h:mm:ss a", Locale.getDefault())
+        }
     }
     Card(
         modifier = modifier
             .fillMaxWidth()
             .testTag("hero_horizon_card"),
         shape = RoundedCornerShape(28.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
     ) {
         // Fixed height: Box(fillMaxSize) below must resolve against a bounded
         // height, otherwise (e.g. inside a LazyColumn item) it expands to the
@@ -65,7 +66,7 @@ fun HeroItem(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(260.dp)
+                .height(260.dp),
         ) {
             MasjidHorizonCanvas(
                 state = state,
@@ -74,31 +75,31 @@ fun HeroItem(
                     .semantics {
                         contentDescription =
                             "Animated sky for ${state?.currentPrayer?.displayName ?: "loading"} prayer"
-                    }
+                    },
             )
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(18.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 // Current Active Prayer Pill (placeholder until the first tick resolves)
                 val currentPrayer = state?.currentPrayer
                 Surface(
                     shape = RoundedCornerShape(16.dp),
                     color = Color.Black.copy(alpha = 0.45f),
-                    modifier = Modifier.testTag("current_prayer_pill")
+                    modifier = Modifier.testTag("current_prayer_pill"),
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Box(
                             modifier = Modifier
                                 .size(8.dp)
                                 .clip(CircleShape)
-                                .background(DarkPrimary)
+                                .background(DarkPrimary),
                         )
                         Text(
                             text = currentPrayer?.let { "${it.displayName.uppercase()} TIME" }
@@ -106,14 +107,14 @@ fun HeroItem(
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 1.5.sp,
-                            color = Color.White
+                            color = Color.White,
                         )
                         currentPrayer?.let {
                             Text(
                                 text = it.arabicName,
                                 style = MaterialTheme.typography.bodySmall,
                                 fontWeight = FontWeight.Bold,
-                                color = GoldLight
+                                color = GoldLight,
                             )
                         }
                     }
@@ -126,18 +127,21 @@ fun HeroItem(
                     style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.ExtraBold,
                     color = Color.White,
-                    modifier = Modifier.testTag("live_clock_text")
+                    modifier = Modifier.testTag("live_clock_text"),
                 )
 
                 val alt = state?.sunAltitudeDegrees ?: 0.0
                 val sunStatus = remember(alt) {
-                    if (alt > 0) String.format(Locale.US, "Sun Altitude: +%.1f° (Day)", alt)
-                    else String.format(Locale.US, "Sun Altitude: %.1f° (Night)", alt)
+                    if (alt > 0) {
+                        String.format(Locale.US, "Sun Altitude: +%.1f° (Day)", alt)
+                    } else {
+                        String.format(Locale.US, "Sun Altitude: %.1f° (Night)", alt)
+                    }
                 }
                 Text(
                     text = sunStatus,
                     style = MaterialTheme.typography.labelSmall,
-                    color = Color.White.copy(alpha = 0.85f)
+                    color = Color.White.copy(alpha = 0.85f),
                 )
             }
         }
@@ -145,11 +149,7 @@ fun HeroItem(
 }
 
 @Composable
-fun HeroItem(
-    tickerFlow: StateFlow<PrayerTickerState>,
-    is24Hour: Boolean,
-    modifier: Modifier = Modifier
-) {
+fun HeroItem(tickerFlow: StateFlow<PrayerTickerState>, is24Hour: Boolean, modifier: Modifier = Modifier) {
     val ticker by tickerFlow.collectAsStateWithLifecycle()
     HeroItem(tickerState = ticker, is24Hour = is24Hour, modifier = modifier)
 }

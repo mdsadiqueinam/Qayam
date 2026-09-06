@@ -1,3 +1,5 @@
+@file:Suppress("FunctionNaming")
+
 package tech.sadique.qayam.ui.screens.main
 
 import androidx.compose.runtime.Composable
@@ -10,28 +12,20 @@ import tech.sadique.qayam.ui.components.CountdownTimerView
 import tech.sadique.qayam.ui.viewmodel.PrayerTickerState
 
 @Composable
-fun CountdownItem(
-    currentState: CurrentPrayerState?,
-    is24Hour: Boolean,
-    modifier: Modifier = Modifier
-) {
+fun CountdownItem(currentState: CurrentPrayerState?, is24Hour: Boolean, modifier: Modifier = Modifier) {
     CountdownTimerView(
         state = currentState,
         is24Hour = is24Hour,
-        modifier = modifier
+        modifier = modifier,
     )
 }
 
 @Composable
-fun CountdownItem(
-    tickerFlow: StateFlow<PrayerTickerState>,
-    is24Hour: Boolean,
-    modifier: Modifier = Modifier
-) {
+fun CountdownItem(tickerFlow: StateFlow<PrayerTickerState>, is24Hour: Boolean, modifier: Modifier = Modifier) {
     val ticker by tickerFlow.collectAsStateWithLifecycle()
     CountdownItem(
         currentState = ticker.currentState,
         is24Hour = is24Hour,
-        modifier = modifier
+        modifier = modifier,
     )
 }

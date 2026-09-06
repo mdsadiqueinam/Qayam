@@ -19,7 +19,7 @@ import kotlin.time.Duration.Companion.seconds
 @Singleton
 class RingtonePlayer @Inject constructor(
     @ApplicationContext private val context: Context,
-    @ApplicationScope private val externalScope: CoroutineScope
+    @ApplicationScope private val externalScope: CoroutineScope,
 ) {
     private companion object {
         const val TAG = "RingtonePlayer"
@@ -31,6 +31,7 @@ class RingtonePlayer @Inject constructor(
     val isPlaying: Boolean
         get() = activeRingtone?.isPlaying == true
 
+    @Suppress("TooGenericExceptionCaught")
     fun playSystemAlarm(onComplete: (() -> Unit)?) {
         stop()
 
@@ -82,6 +83,7 @@ class RingtonePlayer @Inject constructor(
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     fun stop() {
         autoStopJob?.cancel()
         autoStopJob = null

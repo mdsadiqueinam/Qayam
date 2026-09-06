@@ -11,19 +11,15 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class AlarmCapabilities @Inject constructor(
-    @ApplicationContext private val context: Context
-) {
+class AlarmCapabilities @Inject constructor(@ApplicationContext private val context: Context) {
     private val alarmManager = context.getSystemService<AlarmManager>()
     private val notificationManager = context.getSystemService<NotificationManager>()
     private val powerManager = context.getSystemService<PowerManager>()
 
-    fun canScheduleExactAlarms(): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            alarmManager?.canScheduleExactAlarms() ?: false
-        } else {
-            true
-        }
+    fun canScheduleExactAlarms(): Boolean = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        alarmManager?.canScheduleExactAlarms() ?: false
+    } else {
+        true
     }
 
     fun areNotificationsEnabled(): Boolean {
