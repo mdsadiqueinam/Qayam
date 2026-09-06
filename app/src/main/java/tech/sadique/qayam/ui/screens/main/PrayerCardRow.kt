@@ -20,7 +20,6 @@ fun LazyListScope.prayerScheduleItems(
     settings: UserSettings,
     isPlayingSound: Boolean,
     playingSoundType: AdhanSoundType?,
-    onToggleAlert: (PrayerType, Boolean) -> Unit,
     onSoundClick: (PrayerType) -> Unit,
 ) {
     items(PrayerType.dailyPrayers) { prayer ->
@@ -34,7 +33,6 @@ fun LazyListScope.prayerScheduleItems(
             soundType = soundType,
             isEnabled = isEnabled,
             isPlayingThisSound = isPlayingSound && playingSoundType == soundType,
-            onToggleAlert = { onToggleAlert(prayer, !isEnabled) },
             onSoundClick = { onSoundClick(prayer) },
         )
     }
@@ -49,7 +47,6 @@ fun PrayerCardRow(
     soundType: AdhanSoundType,
     isEnabled: Boolean,
     isPlayingThisSound: Boolean,
-    onToggleAlert: () -> Unit,
     onSoundClick: () -> Unit,
 ) {
     PrayerCard(
@@ -61,7 +58,6 @@ fun PrayerCardRow(
         soundType = soundType,
         isEnabled = isEnabled,
         isPlayingThisSound = isPlayingThisSound,
-        onToggleAlert = onToggleAlert,
         onSoundClick = onSoundClick,
     )
 }

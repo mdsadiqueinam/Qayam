@@ -43,7 +43,6 @@ class GreetingScreenshotTest {
                     soundType = AdhanSoundType.MAKKAH,
                     isEnabled = true,
                     isPlayingThisSound = false,
-                    onToggleAlert = {},
                     onSoundClick = {},
                 )
             }
@@ -69,7 +68,6 @@ class GreetingScreenshotTest {
                     soundType = AdhanSoundType.MAKKAH,
                     isEnabled = true,
                     isPlayingThisSound = false,
-                    onToggleAlert = {},
                     onSoundClick = {},
                 )
             }
@@ -95,7 +93,6 @@ class GreetingScreenshotTest {
                     soundType = AdhanSoundType.SILENT,
                     isEnabled = false,
                     isPlayingThisSound = false,
-                    onToggleAlert = {},
                     onSoundClick = {},
                 )
             }

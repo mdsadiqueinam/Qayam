@@ -1,5 +1,3 @@
-
-
 package tech.sadique.qayam.ui.screens.settings
 
 import androidx.compose.foundation.clickable
@@ -35,11 +33,7 @@ fun AppearanceSection(
     on24HourChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    SettingsSectionCard(
-        title = "Appearance & Theme",
-        icon = Icons.Default.DarkMode,
-        modifier = modifier,
-    ) {
+    SettingsSectionCard(title = "Appearance & Theme", icon = Icons.Default.DarkMode, modifier = modifier) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(
                 text = "Theme Switcher",
@@ -47,75 +41,73 @@ fun AppearanceSection(
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
             )
-
             AppThemeMode.entries.forEach { mode ->
-                val isSelected = themeMode == mode
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .clickable { onThemeChange(mode) }
-                        .testTag("theme_option_${mode.id}"),
-                    shape = RoundedCornerShape(12.dp),
-                    color = if (isSelected) {
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-                    } else {
-                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                    },
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        Text(
-                            text = mode.title,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            color = if (isSelected) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.onSurface
-                            },
-                        )
-                        RadioButton(
-                            selected = isSelected,
-                            onClick = { onThemeChange(mode) },
-                        )
-                    }
-                }
+                ThemeOptionRow(mode = mode, isSelected = themeMode == mode, onThemeChange = onThemeChange)
             }
-
             Spacer(modifier = Modifier.height(4.dp))
-
-            // 24-Hour format toggle
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "24-Hour Time Format",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Text(
-                        text = if (is24HourFormat) "Display e.g. 18:30" else "Display e.g. 6:30 PM",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Switch(
-                    checked = is24HourFormat,
-                    onCheckedChange = on24HourChange,
-                    modifier = Modifier.testTag("switch_24h_format"),
-                )
-            }
+            TimeFormatRow(is24HourFormat = is24HourFormat, on24HourChange = on24HourChange)
         }
+    }
+}
+
+@Composable
+private fun ThemeOptionRow(mode: AppThemeMode, isSelected: Boolean, onThemeChange: (AppThemeMode) -> Unit) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable { onThemeChange(mode) }
+            .testTag("theme_option_${mode.id}"),
+        shape = RoundedCornerShape(12.dp),
+        color = if (isSelected) {
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+        } else {
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+        },
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                text = mode.title,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+            )
+            RadioButton(selected = isSelected, onClick = { onThemeChange(mode) })
+        }
+    }
+}
+
+@Composable
+private fun TimeFormatRow(is24HourFormat: Boolean, on24HourChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "24-Hour Time Format",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = if (is24HourFormat) "Display e.g. 18:30" else "Display e.g. 6:30 PM",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Switch(
+            checked = is24HourFormat,
+            onCheckedChange = on24HourChange,
+            modifier = Modifier.testTag("switch_24h_format"),
+        )
     }
 }

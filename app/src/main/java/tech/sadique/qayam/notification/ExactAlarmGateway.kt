@@ -34,7 +34,6 @@ class ExactAlarmGateway @Inject constructor(
     }
 
     @SuppressLint("ScheduleExactAlarm")
-    @Suppress("TooGenericExceptionCaught")
     override fun setExactAlarm(
         prayer: PrayerType,
         triggerTimeMillis: Long,
@@ -91,7 +90,11 @@ class ExactAlarmGateway @Inject constructor(
                     triggerTimeMillis,
                     pendingIntent,
                 )
-            } catch (fallbackEx: Exception) {
+            } catch (fallbackEx: SecurityException) {
+                Log.e(TAG, "Failed to schedule fallback alarm", fallbackEx)
+            } catch (fallbackEx: IllegalStateException) {
+                Log.e(TAG, "Failed to schedule fallback alarm", fallbackEx)
+            } catch (fallbackEx: IllegalArgumentException) {
                 Log.e(TAG, "Failed to schedule fallback alarm", fallbackEx)
             }
         }

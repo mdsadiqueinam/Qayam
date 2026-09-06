@@ -31,7 +31,6 @@ class RingtonePlayer @Inject constructor(
     val isPlaying: Boolean
         get() = activeRingtone?.isPlaying == true
 
-    @Suppress("TooGenericExceptionCaught")
     fun playSystemAlarm(onComplete: (() -> Unit)?) {
         stop()
 
@@ -76,14 +75,21 @@ class RingtonePlayer @Inject constructor(
                 stop()
                 done()
             }
-        } catch (e: Exception) {
+        } catch (e: IllegalStateException) {
+            Log.e(TAG, "Error playing system alarm", e)
+            stop()
+            done()
+        } catch (e: SecurityException) {
+            Log.e(TAG, "Error playing system alarm", e)
+            stop()
+            done()
+        } catch (e: IllegalArgumentException) {
             Log.e(TAG, "Error playing system alarm", e)
             stop()
             done()
         }
     }
 
-    @Suppress("TooGenericExceptionCaught")
     fun stop() {
         autoStopJob?.cancel()
         autoStopJob = null
@@ -94,7 +100,9 @@ class RingtonePlayer @Inject constructor(
                     it.stop()
                 }
             }
-        } catch (e: Exception) {
+        } catch (e: IllegalStateException) {
+            Log.e(TAG, "Error stopping Ringtone", e)
+        } catch (e: SecurityException) {
             Log.e(TAG, "Error stopping Ringtone", e)
         } finally {
             activeRingtone = null

@@ -46,7 +46,6 @@ class AudioPlayerImpl @Inject constructor(
     private val _currentlyPlayingSound = MutableStateFlow<AdhanSoundType?>(null)
     override val currentlyPlayingSound: StateFlow<AdhanSoundType?> = _currentlyPlayingSound.asStateFlow()
 
-    @Suppress("TooGenericExceptionCaught")
     override fun playSound(
         soundType: AdhanSoundType,
         highPriority: Boolean,
@@ -88,7 +87,11 @@ class AudioPlayerImpl @Inject constructor(
             try {
                 val notes = melodyRepository.getMelodySequence(soundType)
                 synthPlayer.play(notes, highPriority, volume, this)
-            } catch (e: Exception) {
+            } catch (e: IllegalStateException) {
+                Log.e(TAG, "Audio synthesis error", e)
+            } catch (e: IllegalArgumentException) {
+                Log.e(TAG, "Audio synthesis error", e)
+            } catch (e: UnsupportedOperationException) {
                 Log.e(TAG, "Audio synthesis error", e)
             } finally {
                 audioFocusManager.abandonAudioFocus()

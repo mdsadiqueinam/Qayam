@@ -9,12 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import tech.sadique.qayam.audio.AudioPreviewController
 import tech.sadique.qayam.data.model.AdhanSoundType
-import tech.sadique.qayam.data.model.AppThemeMode
-import tech.sadique.qayam.data.model.CalculationMethod
 import tech.sadique.qayam.data.model.CurrentPrayerState
-import tech.sadique.qayam.data.model.HighLatitudeRule
-import tech.sadique.qayam.data.model.JuristicMethod
-import tech.sadique.qayam.data.model.LocationInfo
 import tech.sadique.qayam.data.model.PrayerSchedule
 import tech.sadique.qayam.data.model.PrayerType
 import tech.sadique.qayam.data.preferences.SettingsRepository
@@ -46,7 +41,6 @@ data class PrayerTickerState(
 )
 
 @HiltViewModel
-@Suppress("TooManyFunctions")
 class PrayerViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val schedulePrayerAlarmsUseCase: SchedulePrayerAlarmsUseCase,
@@ -61,6 +55,8 @@ class PrayerViewModel @Inject constructor(
     val uiState: StateFlow<PrayerUiState> = _uiState.asStateFlow()
 
     val tickerState: StateFlow<PrayerTickerState> = tickerManager.tickerState
+
+    val settingsUpdater = SettingsUpdateFacade(settingsRepository, viewModelScope)
 
     init {
         var firstSettings = true
@@ -113,46 +109,6 @@ class PrayerViewModel @Inject constructor(
                 )
             }
         }
-    }
-
-    fun selectPresetLocation(location: LocationInfo) {
-        viewModelScope.launch { settingsRepository.updateLocation(location) }
-    }
-
-    fun updateCalculationMethod(method: CalculationMethod) {
-        viewModelScope.launch { settingsRepository.updateCalculationMethod(method) }
-    }
-
-    fun updateJuristicMethod(juristic: JuristicMethod) {
-        viewModelScope.launch { settingsRepository.updateJuristicMethod(juristic) }
-    }
-
-    fun updateHighLatitudeRule(rule: HighLatitudeRule) {
-        viewModelScope.launch { settingsRepository.updateHighLatitudeRule(rule) }
-    }
-
-    fun updateThemeMode(mode: AppThemeMode) {
-        viewModelScope.launch { settingsRepository.updateThemeMode(mode) }
-    }
-
-    fun updateHighPrioritySound(enabled: Boolean) {
-        viewModelScope.launch { settingsRepository.updateHighPrioritySound(enabled) }
-    }
-
-    fun updateIs24HourFormat(is24H: Boolean) {
-        viewModelScope.launch { settingsRepository.updateIs24HourFormat(is24H) }
-    }
-
-    fun updatePrayerAlertSound(prayer: PrayerType, sound: AdhanSoundType) {
-        viewModelScope.launch { settingsRepository.updatePrayerAlertSound(prayer, sound) }
-    }
-
-    fun updatePrayerAlertEnabled(prayer: PrayerType, enabled: Boolean) {
-        viewModelScope.launch { settingsRepository.updatePrayerAlertEnabled(prayer, enabled) }
-    }
-
-    fun updatePrayerMinuteOffset(prayer: PrayerType, offset: Int) {
-        viewModelScope.launch { settingsRepository.updatePrayerMinuteOffset(prayer, offset) }
     }
 
     fun playPreviewSound(soundType: AdhanSoundType) {

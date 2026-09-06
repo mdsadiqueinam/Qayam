@@ -11,6 +11,7 @@ import org.robolectric.annotation.Config
 import tech.sadique.qayam.data.model.CalculationMethod
 import tech.sadique.qayam.data.model.PrayerType
 import tech.sadique.qayam.data.preferences.DataStoreSettingsRepository
+import tech.sadique.qayam.data.preferences.resetToDefaults
 
 /** DataStore integration: write-then-read roundtrip (self-cleaning). */
 @RunWith(RobolectricTestRunner::class)

@@ -15,101 +15,95 @@ data class Note(
 @Singleton
 class MelodyRepository @Inject constructor() {
 
-    @Suppress("MagicNumber", "LongMethod")
     fun getMelodySequence(soundType: AdhanSoundType): List<Note> = when (soundType) {
-        AdhanSoundType.TAKBEER_ONLY -> listOf(
-            // Al-laa-hu Ak-bar (Takbeer 1)
-            Note(220.0, 450, 100, 100),
-            Note(261.63, 600, 120, 150),
-            Note(293.66, 750, 150, 200),
-            Note(261.63, 500, 100, 150),
-            Note(220.0, 900, 150, 350),
-            Note(0.0, 400),
-            // Al-laa-hu Ak-bar (Takbeer 2)
-            Note(220.0, 450, 100, 100),
-            Note(261.63, 600, 120, 150),
-            Note(329.63, 850, 180, 250),
-            Note(293.66, 500, 100, 150),
-            Note(261.63, 1100, 200, 400),
-        )
-
-        AdhanSoundType.GENTLE_CHIME -> listOf(
-            Note(523.25, 600, 30, 500, vibrato = false), // C5
-            Note(659.25, 600, 30, 500, vibrato = false), // E5
-            Note(783.99, 800, 30, 700, vibrato = false), // G5
-            Note(1046.50, 1200, 30, 1000, vibrato = false), // C6
-        )
-
-        AdhanSoundType.MAKKAH -> listOf(
-            // Allahu Akbar (Bayati / Rast Maqam style)
-            Note(220.00, 500, 100, 120), // A3
-            Note(246.94, 550, 100, 150), // B3
-            Note(293.66, 900, 180, 300), // D4
-            Note(261.63, 650, 120, 200), // C4
-            Note(220.00, 1200, 200, 450), // A3
-            Note(0.0, 350),
-
-            // Allahu Akbar (Rising Call)
-            Note(220.00, 450, 100, 100), // A3
-            Note(293.66, 650, 140, 200), // D4
-            Note(349.23, 1100, 220, 400), // F4
-            Note(329.63, 700, 150, 250), // E4
-            Note(293.66, 1300, 220, 500), // D4
-            Note(0.0, 400),
-
-            // Ash-hadu alla ilaha illallah
-            Note(293.66, 600, 120, 150), // D4
-            Note(349.23, 750, 150, 200), // F4
-            Note(392.00, 1200, 250, 450), // G4
-            Note(349.23, 600, 120, 200), // F4
-            Note(293.66, 1400, 250, 550), // D4
-            Note(0.0, 400),
-
-            // Hayya 'alas-Salah
-            Note(329.63, 600, 120, 180), // E4
-            Note(392.00, 900, 180, 300), // G4
-            Note(440.00, 1300, 250, 500), // A4
-            Note(392.00, 600, 120, 200), // G4
-            Note(349.23, 1500, 250, 600), // F4
-        )
-
-        AdhanSoundType.MADINAH -> listOf(
-            // Hijaz/Saba Maqam tone
-            Note(196.00, 600, 120, 180), // G3
-            Note(233.08, 700, 140, 220), // Bb3
-            Note(293.66, 1100, 200, 400), // D4
-            Note(246.94, 600, 120, 200), // B3
-            Note(196.00, 1400, 250, 550), // G3
-            Note(0.0, 400),
-
-            // Allahu Akbar Part 2
-            Note(233.08, 550, 120, 180), // Bb3
-            Note(293.66, 800, 160, 250), // D4
-            Note(369.99, 1300, 250, 450), // F#4
-            Note(293.66, 700, 140, 250), // D4
-            Note(233.08, 1500, 250, 600), // Bb3
-        )
-
-        AdhanSoundType.AL_AQSA -> listOf(
-            // Majestic resonant melody
-            Note(220.00, 600, 120, 200), // A3
-            Note(277.18, 750, 150, 250), // C#4
-            Note(329.63, 1100, 220, 400), // E4
-            Note(277.18, 650, 140, 220), // C#4
-            Note(220.00, 1350, 250, 500), // A3
-            Note(0.0, 350),
-
-            Note(277.18, 550, 120, 180), // C#4
-            Note(329.63, 750, 150, 250), // E4
-            Note(415.30, 1250, 240, 450), // G#4
-            Note(329.63, 700, 140, 220), // E4
-            Note(277.18, 1450, 250, 600), // C#4
-        )
-
-        else -> listOf(
-            Note(440.0, 500),
-            Note(554.37, 500),
-            Note(659.25, 800),
-        )
+        AdhanSoundType.TAKBEER_ONLY -> takbeerMelody()
+        AdhanSoundType.GENTLE_CHIME -> chimeMelody()
+        AdhanSoundType.MAKKAH -> makkahMelody()
+        AdhanSoundType.MADINAH -> madinahMelody()
+        AdhanSoundType.AL_AQSA -> alAqsaMelody()
+        else -> defaultMelody()
     }
+
+    private fun takbeerMelody(): List<Note> = listOf(
+        // Al-laa-hu Ak-bar (Takbeer 1)
+        Note(freq = 220.0, durationMs = 450, attackMs = 100, decayMs = 100),
+        Note(freq = 261.63, durationMs = 600, attackMs = 120, decayMs = 150),
+        Note(freq = 293.66, durationMs = 750, attackMs = 150, decayMs = 200),
+        Note(freq = 261.63, durationMs = 500, attackMs = 100, decayMs = 150),
+        Note(freq = 220.0, durationMs = 900, attackMs = 150, decayMs = 350),
+        Note(freq = 0.0, durationMs = 400),
+        // Al-laa-hu Ak-bar (Takbeer 2)
+        Note(freq = 220.0, durationMs = 450, attackMs = 100, decayMs = 100),
+        Note(freq = 261.63, durationMs = 600, attackMs = 120, decayMs = 150),
+        Note(freq = 329.63, durationMs = 850, attackMs = 180, decayMs = 250),
+        Note(freq = 293.66, durationMs = 500, attackMs = 100, decayMs = 150),
+        Note(freq = 261.63, durationMs = 1100, attackMs = 200, decayMs = 400),
+    )
+
+    private fun chimeMelody(): List<Note> = listOf(
+        Note(freq = 523.25, durationMs = 600, attackMs = 30, decayMs = 500, vibrato = false), // C5
+        Note(freq = 659.25, durationMs = 600, attackMs = 30, decayMs = 500, vibrato = false), // E5
+        Note(freq = 783.99, durationMs = 800, attackMs = 30, decayMs = 700, vibrato = false), // G5
+        Note(freq = 1046.50, durationMs = 1200, attackMs = 30, decayMs = 1000, vibrato = false), // C6
+    )
+
+    private fun makkahMelody(): List<Note> = listOf(
+        Note(freq = 220.00, durationMs = 500, attackMs = 100, decayMs = 120), // A3
+        Note(freq = 246.94, durationMs = 550, attackMs = 100, decayMs = 150), // B3
+        Note(freq = 293.66, durationMs = 900, attackMs = 180, decayMs = 300), // D4
+        Note(freq = 261.63, durationMs = 650, attackMs = 120, decayMs = 200), // C4
+        Note(freq = 220.00, durationMs = 1200, attackMs = 200, decayMs = 450), // A3
+        Note(freq = 0.0, durationMs = 350),
+        Note(freq = 220.00, durationMs = 450, attackMs = 100, decayMs = 100), // A3
+        Note(freq = 293.66, durationMs = 650, attackMs = 140, decayMs = 200), // D4
+        Note(freq = 349.23, durationMs = 1100, attackMs = 220, decayMs = 400), // F4
+        Note(freq = 329.63, durationMs = 700, attackMs = 150, decayMs = 250), // E4
+        Note(freq = 293.66, durationMs = 1300, attackMs = 220, decayMs = 500), // D4
+        Note(freq = 0.0, durationMs = 400),
+        Note(freq = 293.66, durationMs = 600, attackMs = 120, decayMs = 150), // D4
+        Note(freq = 349.23, durationMs = 750, attackMs = 150, decayMs = 200), // F4
+        Note(freq = 392.00, durationMs = 1200, attackMs = 250, decayMs = 450), // G4
+        Note(freq = 349.23, durationMs = 600, attackMs = 120, decayMs = 200), // F4
+        Note(freq = 293.66, durationMs = 1400, attackMs = 250, decayMs = 550), // D4
+        Note(freq = 0.0, durationMs = 400),
+        Note(freq = 329.63, durationMs = 600, attackMs = 120, decayMs = 180), // E4
+        Note(freq = 392.00, durationMs = 900, attackMs = 180, decayMs = 300), // G4
+        Note(freq = 440.00, durationMs = 1300, attackMs = 250, decayMs = 500), // A4
+        Note(freq = 392.00, durationMs = 600, attackMs = 120, decayMs = 200), // G4
+        Note(freq = 349.23, durationMs = 1500, attackMs = 250, decayMs = 600), // F4
+    )
+
+    private fun madinahMelody(): List<Note> = listOf(
+        Note(freq = 196.00, durationMs = 600, attackMs = 120, decayMs = 180), // G3
+        Note(freq = 233.08, durationMs = 700, attackMs = 140, decayMs = 220), // Bb3
+        Note(freq = 293.66, durationMs = 1100, attackMs = 200, decayMs = 400), // D4
+        Note(freq = 246.94, durationMs = 600, attackMs = 120, decayMs = 200), // B3
+        Note(freq = 196.00, durationMs = 1400, attackMs = 250, decayMs = 550), // G3
+        Note(freq = 0.0, durationMs = 400),
+        Note(freq = 233.08, durationMs = 550, attackMs = 120, decayMs = 180), // Bb3
+        Note(freq = 293.66, durationMs = 800, attackMs = 160, decayMs = 250), // D4
+        Note(freq = 369.99, durationMs = 1300, attackMs = 250, decayMs = 450), // F#4
+        Note(freq = 293.66, durationMs = 700, attackMs = 140, decayMs = 250), // D4
+        Note(freq = 233.08, durationMs = 1500, attackMs = 250, decayMs = 600), // Bb3
+    )
+
+    private fun alAqsaMelody(): List<Note> = listOf(
+        Note(freq = 220.00, durationMs = 600, attackMs = 120, decayMs = 200), // A3
+        Note(freq = 277.18, durationMs = 750, attackMs = 150, decayMs = 250), // C#4
+        Note(freq = 329.63, durationMs = 1100, attackMs = 220, decayMs = 400), // E4
+        Note(freq = 277.18, durationMs = 650, attackMs = 140, decayMs = 220), // C#4
+        Note(freq = 220.00, durationMs = 1350, attackMs = 250, decayMs = 500), // A3
+        Note(freq = 0.0, durationMs = 350),
+        Note(freq = 277.18, durationMs = 550, attackMs = 120, decayMs = 180), // C#4
+        Note(freq = 329.63, durationMs = 750, attackMs = 150, decayMs = 250), // E4
+        Note(freq = 415.30, durationMs = 1250, attackMs = 240, decayMs = 450), // G#4
+        Note(freq = 329.63, durationMs = 700, attackMs = 140, decayMs = 220), // E4
+        Note(freq = 277.18, durationMs = 1450, attackMs = 250, decayMs = 600), // C#4
+    )
+
+    private fun defaultMelody(): List<Note> = listOf(
+        Note(freq = 440.0, durationMs = 500),
+        Note(freq = 554.37, durationMs = 500),
+        Note(freq = 659.25, durationMs = 800),
+    )
 }

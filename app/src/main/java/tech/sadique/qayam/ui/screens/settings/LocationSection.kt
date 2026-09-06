@@ -1,5 +1,3 @@
-
-
 package tech.sadique.qayam.ui.screens.settings
 
 import androidx.compose.foundation.layout.Arrangement
@@ -36,74 +34,71 @@ fun LocationSection(
     onSelectPreset: (LocationInfo) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    SettingsSectionCard(
-        title = "Location & Offline Presets",
-        icon = Icons.Default.LocationCity,
-        modifier = modifier,
-    ) {
+    SettingsSectionCard(title = "Location & Offline Presets", icon = Icons.Default.LocationCity, modifier = modifier) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Current Coordinates",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Text(
-                        text = "${currentLocation.cityName} (${String.format(
-                            Locale.US,
-                            "%.2f",
-                            currentLocation.latitude,
-                        )}°, ${String.format(Locale.US, "%.2f", currentLocation.longitude)}°)",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
-
-                IconButton(
-                    onClick = onRefreshGps,
-                    modifier = Modifier.testTag("btn_refresh_gps_settings"),
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.MyLocation,
-                        contentDescription = "Get GPS Location",
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                }
-            }
-
+            CurrentCoordinatesRow(currentLocation = currentLocation, onRefreshGps = onRefreshGps)
             Text(
                 text = "Quick Offline City Presets (1-tap setup):",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            CityPresetsRow(currentLocation = currentLocation, onSelectPreset = onSelectPreset)
+        }
+    }
+}
 
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                items(CityPresets.LIST) { preset ->
-                    val isCurrentCity = currentLocation.cityName.equals(preset.cityName, ignoreCase = true)
-                    FilterChip(
-                        selected = isCurrentCity,
-                        onClick = { onSelectPreset(preset) },
-                        label = { Text(preset.cityName) },
-                        leadingIcon = if (isCurrentCity) {
-                            { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                        } else {
-                            null
-                        },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        ),
-                    )
-                }
-            }
+@Composable
+private fun CurrentCoordinatesRow(currentLocation: LocationInfo, onRefreshGps: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "Current Coordinates",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = "${currentLocation.cityName} (${String.format(
+                    Locale.US,
+                    "%.2f",
+                    currentLocation.latitude,
+                )}°, ${String.format(Locale.US, "%.2f", currentLocation.longitude)}°)",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+        IconButton(onClick = onRefreshGps, modifier = Modifier.testTag("btn_refresh_gps_settings")) {
+            Icon(
+                imageVector = Icons.Default.MyLocation,
+                contentDescription = "Get GPS Location",
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        }
+    }
+}
+
+@Composable
+private fun CityPresetsRow(currentLocation: LocationInfo, onSelectPreset: (LocationInfo) -> Unit) {
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+        items(CityPresets.LIST) { preset ->
+            val isCurrentCity = currentLocation.cityName.equals(preset.cityName, ignoreCase = true)
+            FilterChip(
+                selected = isCurrentCity,
+                onClick = { onSelectPreset(preset) },
+                label = { Text(preset.cityName) },
+                leadingIcon = if (isCurrentCity) {
+                    { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                } else {
+                    null
+                },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                ),
+            )
         }
     }
 }

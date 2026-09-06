@@ -27,7 +27,6 @@ class FusedLocationProviderImpl @Inject constructor(@ApplicationContext private 
     private val fusedLocationClient: FusedLocationProviderClient =
         LocationServices.getFusedLocationProviderClient(context)
 
-    @Suppress("TooGenericExceptionCaught")
     override suspend fun getCurrentLocation(): Coordinates? = withContext(Dispatchers.IO) {
         val hasPerm = ContextCompat.checkSelfPermission(
             context,
@@ -74,7 +73,13 @@ class FusedLocationProviderImpl @Inject constructor(@ApplicationContext private 
                     altitude = it.altitude,
                 )
             }
-        } catch (e: Exception) {
+        } catch (e: SecurityException) {
+            Log.e("LocationProvider", "Error retrieving GPS location", e)
+            null
+        } catch (e: IllegalStateException) {
+            Log.e("LocationProvider", "Error retrieving GPS location", e)
+            null
+        } catch (e: IllegalArgumentException) {
             Log.e("LocationProvider", "Error retrieving GPS location", e)
             null
         }

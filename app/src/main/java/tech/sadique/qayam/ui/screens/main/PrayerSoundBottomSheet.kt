@@ -1,4 +1,3 @@
-
 package tech.sadique.qayam.ui.screens.main
 
 import androidx.compose.foundation.layout.Arrangement
@@ -44,10 +43,7 @@ fun PrayerSoundBottomSheet(
     onPlayPreview: (AdhanSoundType) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-    ) {
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -55,106 +51,122 @@ fun PrayerSoundBottomSheet(
                 .windowInsetsPadding(WindowInsets.navigationBars)
                 .testTag("sound_selection_bottom_sheet"),
         ) {
-            // Header with Prayer Name
-            Text(
-                text = "${prayer.displayName} Alert Settings",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
+            BottomSheetHeader(prayer = prayer)
+            Spacer(modifier = Modifier.height(16.dp))
+            NotificationToggleCard(prayer = prayer, isEnabled = isEnabled, onToggle = onToggleAlertEnabled)
+            Spacer(modifier = Modifier.height(16.dp))
+            BottomSheetSoundContent(
+                prayer = prayer,
+                currentSound = currentSound,
+                isEnabled = isEnabled,
+                isPlayingSound = isPlayingSound,
+                playingSoundType = playingSoundType,
+                onSelectSound = onSelectSound,
+                onPlayPreview = onPlayPreview,
             )
-            Text(
-                text = "Control notification and alarm sound for this prayer",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
             Spacer(modifier = Modifier.height(16.dp))
-
-            // Show Notification Toggle Card
-            Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = if (isEnabled) {
-                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-                } else {
-                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-                },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Show Notification",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = if (isEnabled) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.onSurface
-                            },
-                        )
-                        Text(
-                            text = if (isEnabled) "Notifications are turned ON" else "Notifications are turned OFF",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-
-                    Switch(
-                        checked = isEnabled,
-                        onCheckedChange = onToggleAlertEnabled,
-                        modifier = Modifier.testTag("switch_prayer_enabled_${prayer.id}"),
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            if (!isEnabled) {
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(
-                        text = "No notification or alarm will be triggered for ${prayer.displayName}." +
-                            " Enable the switch above to receive alerts.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(16.dp),
-                    )
-                }
-            } else {
-                Text(
-                    text = "Alert Type & Sound:",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                PrayerSoundPicker(
-                    currentSound = currentSound,
-                    isPlayingSound = isPlayingSound,
-                    playingSoundType = playingSoundType,
-                    onSelectSound = onSelectSound,
-                    onPlayPreview = onPlayPreview,
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(
-                onClick = onDismiss,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp),
-            ) {
+            Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) {
                 Text("Done", fontWeight = FontWeight.Bold)
             }
         }
+    }
+}
+
+@Composable
+private fun BottomSheetHeader(prayer: PrayerType) {
+    Text(
+        text = "${prayer.displayName} Alert Settings",
+        style = MaterialTheme.typography.titleLarge,
+        fontWeight = FontWeight.Bold,
+    )
+    Text(
+        text = "Control notification and alarm sound for this prayer",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
+
+@Composable
+private fun NotificationToggleCard(prayer: PrayerType, isEnabled: Boolean, onToggle: (Boolean) -> Unit) {
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = toggleCardColor(isEnabled),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Show Notification",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = if (isEnabled) "Notifications are turned ON" else "Notifications are turned OFF",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Switch(
+                checked = isEnabled,
+                onCheckedChange = onToggle,
+                modifier = Modifier.testTag("switch_prayer_enabled_${prayer.id}"),
+            )
+        }
+    }
+}
+
+@Composable
+private fun toggleCardColor(isEnabled: Boolean) = if (isEnabled) {
+    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+} else {
+    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+}
+
+@Composable
+private fun BottomSheetSoundContent(
+    prayer: PrayerType,
+    currentSound: AdhanSoundType,
+    isEnabled: Boolean,
+    isPlayingSound: Boolean,
+    playingSoundType: AdhanSoundType?,
+    onSelectSound: (AdhanSoundType) -> Unit,
+    onPlayPreview: (AdhanSoundType) -> Unit,
+) {
+    if (!isEnabled) {
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(
+                text = "No notification or alarm will be triggered for ${prayer.displayName}." +
+                    " Enable the switch above to receive alerts.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(16.dp),
+            )
+        }
+    } else {
+        Text(
+            text = "Alert Type & Sound:",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        PrayerSoundPicker(
+            currentSound = currentSound,
+            isPlayingSound = isPlayingSound,
+            playingSoundType = playingSoundType,
+            onSelectSound = onSelectSound,
+            onPlayPreview = onPlayPreview,
+        )
     }
 }

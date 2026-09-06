@@ -1,5 +1,3 @@
-
-
 package tech.sadique.qayam.ui.screens.settings
 
 import androidx.compose.foundation.clickable
@@ -31,65 +29,65 @@ fun JuristicSection(
     onJuristicSelect: (JuristicMethod) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    SettingsSectionCard(
-        title = "School of Thought (Asr)",
-        icon = Icons.Default.School,
-        modifier = modifier,
-    ) {
+    SettingsSectionCard(title = "School of Thought (Asr)", icon = Icons.Default.School, modifier = modifier) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
                 text = "Determines Asr prayer time shadow ratio",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-
             JuristicMethod.entries.forEach { juristic ->
-                val isSelected = selectedJuristic == juristic
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .clickable { onJuristicSelect(juristic) }
-                        .testTag("juristic_${juristic.id}"),
-                    shape = RoundedCornerShape(12.dp),
-                    color = if (isSelected) {
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
-                    } else {
-                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
-                    },
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = juristic.title,
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
-                                color = if (isSelected) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.onSurface
-                                },
-                            )
-                            Text(
-                                text = juristic.description,
-                                style = MaterialTheme.typography.bodySmall,
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        RadioButton(
-                            selected = isSelected,
-                            onClick = { onJuristicSelect(juristic) },
-                        )
-                    }
-                }
+                JuristicOptionRow(
+                    juristic = juristic,
+                    isSelected = selectedJuristic == juristic,
+                    onJuristicSelect = onJuristicSelect,
+                )
             }
+        }
+    }
+}
+
+@Composable
+private fun JuristicOptionRow(
+    juristic: JuristicMethod,
+    isSelected: Boolean,
+    onJuristicSelect: (JuristicMethod) -> Unit,
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable { onJuristicSelect(juristic) }
+            .testTag("juristic_${juristic.id}"),
+        shape = RoundedCornerShape(12.dp),
+        color = if (isSelected) {
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+        } else {
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
+        },
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = juristic.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = juristic.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            RadioButton(selected = isSelected, onClick = { onJuristicSelect(juristic) })
         }
     }
 }

@@ -1,9 +1,10 @@
-
 package tech.sadique.qayam.ui.screens
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -19,6 +20,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -46,6 +48,8 @@ import tech.sadique.qayam.ui.screens.main.HeroItem
 import tech.sadique.qayam.ui.screens.main.LocationTopBar
 import tech.sadique.qayam.ui.screens.main.PrayerSoundBottomSheet
 import tech.sadique.qayam.ui.screens.main.prayerScheduleItems
+import tech.sadique.qayam.ui.viewmodel.PrayerTickerState
+import tech.sadique.qayam.ui.viewmodel.PrayerUiState
 import tech.sadique.qayam.ui.viewmodel.PrayerViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -54,59 +58,17 @@ fun MainPrayerScreen(viewModel: PrayerViewModel, onNavigateToSettings: () -> Uni
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val tickerState by viewModel.tickerState.collectAsStateWithLifecycle()
-
     var selectedPrayerId by rememberSaveable { mutableStateOf<String?>(null) }
-    val selectedPrayerForSoundModal = selectedPrayerId?.let { PrayerType.fromId(it) }
     val sheetState = rememberModalBottomSheetState()
-
-    // Permission launchers
-    val locationPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestMultiplePermissions(),
-    ) { permissions ->
-        val granted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
-            permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
-        if (granted) {
-            viewModel.refreshGpsLocation()
-        }
-    }
-
-    val notificationPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-    ) { /* handled */ }
-
-    LaunchedEffect(Unit) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.POST_NOTIFICATIONS,
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-            }
-        }
-
-        val hasLocPerm = ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.ACCESS_FINE_LOCATION,
-        ) == PackageManager.PERMISSION_GRANTED ||
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.ACCESS_COARSE_LOCATION,
-            ) == PackageManager.PERMISSION_GRANTED
-        if (!hasLocPerm) {
-            locationPermissionLauncher.launch(
-                arrayOf(
-                    Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.ACCESS_COARSE_LOCATION,
-                ),
-            )
-        }
-    }
-
+    val locationLauncher = rememberLocationLauncher(onGranted = { viewModel.refreshGpsLocation() })
+    val notificationLauncher = rememberNotificationLauncher()
+    RequestPermissionsEffect(
+        context = context,
+        locationLauncher = locationLauncher,
+        notificationLauncher = notificationLauncher,
+    )
     Scaffold(
-        modifier = modifier
-            .fillMaxSize()
-            .windowInsetsPadding(WindowInsets.statusBars),
+        modifier = modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars),
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
             AudioPlayingBanner(
@@ -116,131 +78,198 @@ fun MainPrayerScreen(viewModel: PrayerViewModel, onNavigateToSettings: () -> Uni
             )
         },
     ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .testTag("main_prayer_screen_list"),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 28.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            // 1. Top Bar with Location & Settings Button
-            item {
-                LocationTopBar(
-                    location = uiState.settings.currentLocation,
-                    isLoading = uiState.isLocationLoading,
-                    onRefreshLocation = {
-                        val granted = ContextCompat.checkSelfPermission(
-                            context,
-                            Manifest.permission.ACCESS_FINE_LOCATION,
-                        ) == PackageManager.PERMISSION_GRANTED ||
-                            ContextCompat.checkSelfPermission(
-                                context,
-                                Manifest.permission.ACCESS_COARSE_LOCATION,
-                            ) == PackageManager.PERMISSION_GRANTED
-                        if (granted) {
-                            viewModel.refreshGpsLocation()
-                        } else {
-                            locationPermissionLauncher.launch(
-                                arrayOf(
-                                    Manifest.permission.ACCESS_FINE_LOCATION,
-                                    Manifest.permission.ACCESS_COARSE_LOCATION,
-                                ),
-                            )
-                        }
-                    },
-                    onNavigateToSettings = onNavigateToSettings,
-                )
-            }
-
-            // 2. Date Subtitle
-            item {
-                DateSubtitleItem(
-                    currentTimeMillis = tickerState.currentTimeMillis,
-                    calculationTitle = uiState.settings.calculationMethod.title.substringBefore('('),
-                )
-            }
-
-            // 3. Hero Animated Sun / Horizon Canvas with Mosque & Active Prayer
-            item {
-                HeroItem(
-                    tickerState = tickerState,
-                    is24Hour = uiState.settings.is24HourFormat,
-                )
-            }
-
-            // 4. Upcoming Prayer Countdown Timer Card
-            item {
-                CountdownItem(
-                    currentState = tickerState.currentState,
-                    is24Hour = uiState.settings.is24HourFormat,
-                )
-            }
-
-            // 5. Daily Salah Schedule Header
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 4.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = "Today's Prayers",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.semantics { heading() },
-                    )
-                    Text(
-                        text = uiState.settings.juristicMethod.title.substringBefore('(').trim(),
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
-            }
-
-            // 6. Prayer Cards
-            val schedule = uiState.schedule
-            if (schedule != null) {
-                prayerScheduleItems(
-                    schedule = schedule,
-                    tickerState = tickerState,
-                    settings = uiState.settings,
-                    isPlayingSound = uiState.isPlayingSound,
-                    playingSoundType = uiState.playingSoundType,
-                    onToggleAlert = { prayer, enabled ->
-                        viewModel.updatePrayerAlertEnabled(prayer, enabled)
-                    },
-                    onSoundClick = { prayer -> selectedPrayerId = prayer.id },
-                )
-            }
-        }
-    }
-
-    selectedPrayerForSoundModal?.let { prayer ->
-        val currentSound = uiState.settings.prayerAlertSounds[prayer] ?: AdhanSoundType.MAKKAH
-        val isEnabled = uiState.settings.prayerAlertEnabled[prayer] ?: prayer.defaultAlertEnabled
-
-        PrayerSoundBottomSheet(
-            prayer = prayer,
-            currentSound = currentSound,
-            isEnabled = isEnabled,
-            isPlayingSound = uiState.isPlayingSound,
-            playingSoundType = uiState.playingSoundType,
-            sheetState = sheetState,
-            onToggleAlertEnabled = { checked ->
-                viewModel.updatePrayerAlertEnabled(prayer, checked)
-            },
-            onSelectSound = { sound ->
-                viewModel.updatePrayerAlertSound(prayer, sound)
-            },
-            onPlayPreview = { sound ->
-                viewModel.playPreviewSound(sound)
-            },
-            onDismiss = { selectedPrayerId = null },
+        MainPrayerListContent(
+            uiState = uiState,
+            tickerState = tickerState,
+            onRefreshLocation = { handleLocationRefresh(context, viewModel, locationLauncher) },
+            onNavigateToSettings = onNavigateToSettings,
+            onSoundClick = { prayer -> selectedPrayerId = prayer.id },
+            modifier = Modifier.padding(innerPadding),
         )
     }
+    SoundBottomSheetHost(
+        selectedPrayerId = selectedPrayerId,
+        uiState = uiState,
+        sheetState = sheetState,
+        onDismiss = { selectedPrayerId = null },
+        onToggle = { prayer, checked -> viewModel.settingsUpdater.updatePrayerAlertEnabled(prayer, checked) },
+        onSelectSound = { prayer, sound -> viewModel.settingsUpdater.updatePrayerAlertSound(prayer, sound) },
+        onPreview = { sound -> viewModel.playPreviewSound(sound) },
+    )
+}
+
+@Composable
+private fun rememberLocationLauncher(onGranted: () -> Unit) = rememberLauncherForActivityResult(
+    contract = ActivityResultContracts.RequestMultiplePermissions(),
+) { permissions ->
+    val granted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+        permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+    if (granted) {
+        onGranted()
+    }
+}
+
+@Composable
+private fun rememberNotificationLauncher() = rememberLauncherForActivityResult(
+    contract = ActivityResultContracts.RequestPermission(),
+) { }
+
+@Composable
+private fun RequestPermissionsEffect(
+    context: Context,
+    locationLauncher: ManagedActivityResultLauncher<Array<String>, Map<String, Boolean>>,
+    notificationLauncher: ManagedActivityResultLauncher<String, Boolean>,
+) {
+    LaunchedEffect(Unit) {
+        if (needsNotificationPermission(context)) {
+            notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        if (!hasLocationPermission(context)) {
+            locationLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                ),
+            )
+        }
+    }
+}
+
+private fun needsNotificationPermission(context: Context): Boolean {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+        return false
+    }
+    return ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.POST_NOTIFICATIONS,
+    ) != PackageManager.PERMISSION_GRANTED
+}
+
+private fun hasLocationPermission(context: Context): Boolean = ContextCompat.checkSelfPermission(
+    context,
+    Manifest.permission.ACCESS_FINE_LOCATION,
+) == PackageManager.PERMISSION_GRANTED ||
+    ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.ACCESS_COARSE_LOCATION,
+    ) == PackageManager.PERMISSION_GRANTED
+
+private fun handleLocationRefresh(
+    context: Context,
+    viewModel: PrayerViewModel,
+    locationLauncher: ManagedActivityResultLauncher<Array<String>, Map<String, Boolean>>,
+) {
+    if (hasLocationPermission(context)) {
+        viewModel.refreshGpsLocation()
+    } else {
+        locationLauncher.launch(
+            arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+            ),
+        )
+    }
+}
+
+@Composable
+private fun MainPrayerListContent(
+    uiState: PrayerUiState,
+    tickerState: PrayerTickerState,
+    onRefreshLocation: () -> Unit,
+    onNavigateToSettings: () -> Unit,
+    onSoundClick: (PrayerType) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    LazyColumn(
+        modifier = modifier.fillMaxSize().testTag("main_prayer_screen_list"),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 28.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        item {
+            LocationTopBar(
+                location = uiState.settings.currentLocation,
+                isLoading = uiState.isLocationLoading,
+                onRefreshLocation = onRefreshLocation,
+                onNavigateToSettings = onNavigateToSettings,
+            )
+        }
+        item {
+            DateSubtitleItem(
+                currentTimeMillis = tickerState.currentTimeMillis,
+                calculationTitle = uiState.settings.calculationMethod.title.substringBefore('('),
+            )
+        }
+        item {
+            HeroItem(tickerState = tickerState, is24Hour = uiState.settings.is24HourFormat)
+        }
+        item {
+            CountdownItem(currentState = tickerState.currentState, is24Hour = uiState.settings.is24HourFormat)
+        }
+        item {
+            ScheduleHeader(juristicTitle = uiState.settings.juristicMethod.title.substringBefore('(').trim())
+        }
+        val schedule = uiState.schedule
+        if (schedule != null) {
+            prayerScheduleItems(
+                schedule = schedule,
+                tickerState = tickerState,
+                settings = uiState.settings,
+                isPlayingSound = uiState.isPlayingSound,
+                playingSoundType = uiState.playingSoundType,
+                onSoundClick = onSoundClick,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ScheduleHeader(juristicTitle: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = "Today's Prayers",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.semantics { heading() },
+        )
+        Text(
+            text = juristicTitle,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.primary,
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SoundBottomSheetHost(
+    selectedPrayerId: String?,
+    uiState: PrayerUiState,
+    sheetState: SheetState,
+    onDismiss: () -> Unit,
+    onToggle: (PrayerType, Boolean) -> Unit,
+    onSelectSound: (PrayerType, AdhanSoundType) -> Unit,
+    onPreview: (AdhanSoundType) -> Unit,
+) {
+    val prayer = selectedPrayerId?.let { PrayerType.fromId(it) }
+    if (prayer == null) {
+        return
+    }
+    PrayerSoundBottomSheet(
+        prayer = prayer,
+        currentSound = uiState.settings.prayerAlertSounds[prayer] ?: AdhanSoundType.MAKKAH,
+        isEnabled = uiState.settings.prayerAlertEnabled[prayer] ?: prayer.defaultAlertEnabled,
+        isPlayingSound = uiState.isPlayingSound,
+        playingSoundType = uiState.playingSoundType,
+        sheetState = sheetState,
+        onToggleAlertEnabled = { checked -> onToggle(prayer, checked) },
+        onSelectSound = { sound -> onSelectSound(prayer, sound) },
+        onPlayPreview = onPreview,
+        onDismiss = onDismiss,
+    )
 }

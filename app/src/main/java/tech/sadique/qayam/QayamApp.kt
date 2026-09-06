@@ -39,12 +39,15 @@ class QayamApp : Application() {
         armUpcomingAlarms()
     }
 
-    @Suppress("TooGenericExceptionCaught")
     private fun armUpcomingAlarms() {
         applicationScope.launch {
             try {
                 schedulePrayerAlarmsUseCase(settingsRepository.snapshot())
-            } catch (e: Exception) {
+            } catch (e: IllegalStateException) {
+                Log.e("QayamApp", "Failed to schedule upcoming alarms on app launch", e)
+            } catch (e: SecurityException) {
+                Log.e("QayamApp", "Failed to schedule upcoming alarms on app launch", e)
+            } catch (e: IllegalArgumentException) {
                 Log.e("QayamApp", "Failed to schedule upcoming alarms on app launch", e)
             }
         }

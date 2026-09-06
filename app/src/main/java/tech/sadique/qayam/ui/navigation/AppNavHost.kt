@@ -20,11 +20,6 @@ import tech.sadique.qayam.ui.screens.MainPrayerScreen
 import tech.sadique.qayam.ui.screens.SettingsScreen
 import tech.sadique.qayam.ui.viewmodel.PrayerViewModel
 
-enum class AppScreen {
-    MAIN,
-    SETTINGS,
-}
-
 @Composable
 fun AppNavHost(viewModel: PrayerViewModel, modifier: Modifier = Modifier) {
     var currentScreenId by rememberSaveable { mutableStateOf(AppScreen.MAIN.name) }

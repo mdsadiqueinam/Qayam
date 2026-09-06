@@ -106,7 +106,7 @@ class PrayerTickerTest {
             assertEquals(6, fakeScheduler.scheduledAlarms.size)
 
             // Disable Fajr alarm
-            vm.updatePrayerAlertEnabled(PrayerType.FAJR, false)
+            vm.settingsUpdater.updatePrayerAlertEnabled(PrayerType.FAJR, false)
             testDispatcher.scheduler.runCurrent()
             testDispatcher.scheduler.runCurrent()
 

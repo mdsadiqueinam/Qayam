@@ -15,7 +15,6 @@ import javax.inject.Singleton
 class AndroidGeocoderServiceImpl @Inject constructor(@ApplicationContext private val context: Context) :
     GeocoderService {
 
-    @Suppress("TooGenericExceptionCaught")
     override suspend fun getCityAndCountry(lat: Double, lng: Double): Pair<String, String> =
         withContext(Dispatchers.IO) {
             try {
@@ -32,7 +31,13 @@ class AndroidGeocoderServiceImpl @Inject constructor(@ApplicationContext private
                 } else {
                     String.format(Locale.US, "%.2f°, %.2f°", lat, lng) to "GPS Location"
                 }
-            } catch (e: Exception) {
+            } catch (e: java.io.IOException) {
+                Log.w("AndroidGeocoder", "Failed to reverse geocode ($lat, $lng)", e)
+                String.format(Locale.US, "%.2f°, %.2f°", lat, lng) to "GPS Location"
+            } catch (e: IllegalArgumentException) {
+                Log.w("AndroidGeocoder", "Failed to reverse geocode ($lat, $lng)", e)
+                String.format(Locale.US, "%.2f°, %.2f°", lat, lng) to "GPS Location"
+            } catch (e: IllegalStateException) {
                 Log.w("AndroidGeocoder", "Failed to reverse geocode ($lat, $lng)", e)
                 String.format(Locale.US, "%.2f°, %.2f°", lat, lng) to "GPS Location"
             }

@@ -11,7 +11,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -50,6 +49,18 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 
+private const val STAR_FIELD_FRACTION = 0.7f
+private const val HORIZON_FRACTION = 0.80f
+private const val DASH_ON_LENGTH = 12f
+private const val DASH_OFF_LENGTH = 10f
+private const val MOON_CRATER_OFFSET_X_FACTOR = 0.45f
+private const val MOON_CRATER_OFFSET_Y_FACTOR = 0.25f
+private const val MOON_STAR_OFFSET_X_FACTOR = 1.3f
+private const val MOON_STAR_OFFSET_Y_FACTOR = 0.2f
+
+private val SUN_CORE_HIGHLIGHT = Color(0xFFFFF9C4)
+private val MOON_SURFACE_COLOR = Color(0xFFFFF7C2)
+
 @Composable
 fun MasjidHorizonCanvas(state: CurrentPrayerState?, modifier: Modifier = Modifier) {
     val infiniteTransition = rememberInfiniteTransition(label = "HorizonAnimation")
@@ -65,14 +76,44 @@ fun MasjidHorizonCanvas(state: CurrentPrayerState?, modifier: Modifier = Modifie
 
     val currentPrayer = state?.currentPrayer ?: PrayerType.DHUHR
     val isDaytime = state?.isDaytime ?: true
-    val progress = state?.sunProgressPercent ?: 0.5f
-    val sunAltitude = state?.sunAltitudeDegrees ?: 45.0
     val showStars = !isDaytime || currentPrayer == PrayerType.FAJR || currentPrayer == PrayerType.ISHA
+    val starTwinkle = runStarTwinkle(showStars)
 
-    // Star twinkle runs only when stars are actually drawn; otherwise the
-    // transition is not composed and the canvas is not invalidated for it.
-    val starTwinkle = starTwinkleOrStatic(showStars)
+    Box(modifier = modifier) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val width = size.width
+            val height = size.height
+            drawSkyWithStars(width, height, currentPrayer, showStars, starTwinkle)
+            val horizonY = height * HORIZON_FRACTION
+            drawOrbitAndCelestial(width, horizonY, state, pulse)
+            drawHorizonAndMosque(width, height, horizonY, currentPrayer, isDaytime)
+        }
+    }
+}
 
+@Composable
+private fun runStarTwinkle(showStars: Boolean): Float {
+    if (!showStars) return 1f
+    val twinkleTransition = rememberInfiniteTransition(label = "StarTwinkle")
+    val twinkle by twinkleTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1800, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "StarTwinkleValue",
+    )
+    return twinkle
+}
+
+private fun DrawScope.drawSkyWithStars(
+    width: Float,
+    height: Float,
+    currentPrayer: PrayerType,
+    showStars: Boolean,
+    starTwinkle: Float,
+) {
     val skyGradientColors = when (currentPrayer) {
         PrayerType.FAJR -> listOf(SkyFajrStart, SkyFajrMid, SkyFajrEnd)
         PrayerType.SUNRISE -> listOf(SkySunriseStart, SkySunriseMid, SkySunriseEnd)
@@ -83,112 +124,60 @@ fun MasjidHorizonCanvas(state: CurrentPrayerState?, modifier: Modifier = Modifie
         PrayerType.MAGHRIB -> listOf(SkyMaghribStart, SkyMaghribMid, SkyMaghribEnd)
         PrayerType.ISHA -> listOf(SkyIshaStart, SkyIshaMid, SkyIshaEnd)
     }
-
-    Box(modifier = modifier) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val width = size.width
-            val height = size.height
-
-            // 1. Draw Sky Background Gradient
-            drawRect(
-                brush = Brush.verticalGradient(
-                    colors = skyGradientColors,
-                    startY = 0f,
-                    endY = height,
-                ),
-            )
-
-            // 1b. Top scrim so the pill/clock/tag overlay stays legible
-            // over bright skies and celestial bodies on short cards.
-            drawRect(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        Color.Black.copy(alpha = 0.30f),
-                        Color.Transparent,
-                    ),
-                    startY = 0f,
-                    endY = height * 0.55f,
-                ),
-            )
-
-            // 2. Draw Stars (if night or twilight)
-            if (showStars) {
-                drawStars(width, height * 0.7f, starTwinkle)
-            }
-
-            val horizonY = height * 0.80f
-
-            // 3. Draw Celestial Arc (Sun / Moon orbit guide line)
-            val arcPath = Path().apply {
-                moveTo(width * 0.08f, horizonY)
-                cubicTo(
-                    width * 0.25f,
-                    height * 0.15f,
-                    width * 0.75f,
-                    height * 0.15f,
-                    width * 0.92f,
-                    horizonY,
-                )
-            }
-            drawPath(
-                path = arcPath,
-                color = Color.White.copy(alpha = 0.25f),
-                style = Stroke(
-                    width = 2.dp.toPx(),
-                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(12f, 10f), 0f),
-                ),
-            )
-
-            // 4. Calculate Sun / Moon position along the arc
-            // Progress goes 0.0 -> 1.0 (Left horizon -> Peak -> Right horizon)
-            val angle = PI * (1.0 - progress) // PI down to 0
-            val arcCenterX = width * 0.5f
-            val arcRadiusX = width * 0.42f
-            val arcRadiusY = height * 0.55f
-
-            val celestialX = (arcCenterX + arcRadiusX * cos(angle)).toFloat()
-            val celestialY = (horizonY - arcRadiusY * sin(angle)).toFloat()
-
-            if (isDaytime) {
-                // Draw Sun
-                drawSun(
-                    center = Offset(celestialX, celestialY),
-                    pulse = pulse,
-                    prayerType = currentPrayer,
-                )
-            } else {
-                // Draw Moon (Crescent)
-                drawCrescentMoon(
-                    center = Offset(celestialX, celestialY),
-                    pulse = pulse,
-                )
-            }
-
-            // 5. Draw Horizon Ground & Silhouette Layers
-            drawHorizonAndMosque(width, height, horizonY, currentPrayer, isDaytime)
+    drawRect(
+        brush = Brush.verticalGradient(colors = skyGradientColors, startY = 0f, endY = height),
+    )
+    drawRect(
+        brush = Brush.verticalGradient(
+            colors = listOf(Color.Black.copy(alpha = 0.30f), Color.Transparent),
+            startY = 0f,
+            endY = height * 0.55f,
+        ),
+    )
+    if (showStars) {
+        val starCoords = listOf(
+            Pair(0.12f, 0.20f), Pair(0.25f, 0.12f), Pair(0.38f, 0.28f),
+            Pair(0.48f, 0.15f), Pair(0.62f, 0.22f), Pair(0.72f, 0.10f),
+            Pair(0.85f, 0.25f), Pair(0.18f, 0.42f), Pair(0.82f, 0.45f),
+            Pair(0.55f, 0.35f), Pair(0.30f, 0.48f), Pair(0.68f, 0.50f),
+        )
+        for ((index, coord) in starCoords.withIndex()) {
+            val x = coord.first * width
+            val y = coord.second * (height * STAR_FIELD_FRACTION)
+            val alpha = if (index % 2 == 0) starTwinkle else (1.3f - starTwinkle).coerceIn(0.2f, 1.0f)
+            val radius = if (index % 3 == 0) 2.5.dp.toPx() else 1.5.dp.toPx()
+            drawCircle(color = Color.White.copy(alpha = alpha * 0.85f), radius = radius, center = Offset(x, y))
         }
     }
 }
 
-private fun DrawScope.drawStars(width: Float, maxHeight: Float, twinkle: Float) {
-    val starCoords = listOf(
-        Pair(0.12f, 0.20f), Pair(0.25f, 0.12f), Pair(0.38f, 0.28f),
-        Pair(0.48f, 0.15f), Pair(0.62f, 0.22f), Pair(0.72f, 0.10f),
-        Pair(0.85f, 0.25f), Pair(0.18f, 0.42f), Pair(0.82f, 0.45f),
-        Pair(0.55f, 0.35f), Pair(0.30f, 0.48f), Pair(0.68f, 0.50f),
+private fun DrawScope.drawOrbitAndCelestial(width: Float, horizonY: Float, state: CurrentPrayerState?, pulse: Float) {
+    val height = size.height
+    val currentPrayer = state?.currentPrayer ?: PrayerType.DHUHR
+    val isDaytime = state?.isDaytime ?: true
+    val progress = state?.sunProgressPercent ?: 0.5f
+    val arcPath = Path().apply {
+        moveTo(width * 0.08f, horizonY)
+        cubicTo(width * 0.25f, height * 0.15f, width * 0.75f, height * 0.15f, width * 0.92f, horizonY)
+    }
+    drawPath(
+        path = arcPath,
+        color = Color.White.copy(alpha = 0.25f),
+        style = Stroke(
+            width = 2.dp.toPx(),
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(DASH_ON_LENGTH, DASH_OFF_LENGTH), 0f),
+        ),
     )
-
-    for ((index, coord) in starCoords.withIndex()) {
-        val x = coord.first * width
-        val y = coord.second * maxHeight
-        val alpha = if (index % 2 == 0) twinkle else (1.3f - twinkle).coerceIn(0.2f, 1.0f)
-        val radius = if (index % 3 == 0) 2.5.dp.toPx() else 1.5.dp.toPx()
-
-        drawCircle(
-            color = Color.White.copy(alpha = alpha * 0.85f),
-            radius = radius,
-            center = Offset(x, y),
-        )
+    val angle = PI * (1.0 - progress)
+    val arcCenterX = width * 0.5f
+    val arcRadiusX = width * 0.42f
+    val arcRadiusY = height * 0.55f
+    val celestialX = (arcCenterX + arcRadiusX * cos(angle)).toFloat()
+    val celestialY = (horizonY - arcRadiusY * sin(angle)).toFloat()
+    if (isDaytime) {
+        drawSun(center = Offset(celestialX, celestialY), pulse = pulse, prayerType = currentPrayer)
+    } else {
+        drawCrescentMoon(center = Offset(celestialX, celestialY), pulse = pulse)
     }
 }
 
@@ -198,71 +187,46 @@ private fun DrawScope.drawSun(center: Offset, pulse: Float, prayerType: PrayerTy
         PrayerType.ISRAQ, PrayerType.ASR -> Color(0xFFFFB300)
         else -> Color(0xFFFFD54F)
     }
-
-    // Outer Glow / Corona
     drawCircle(
         brush = Brush.radialGradient(
-            colors = listOf(
-                sunColor.copy(alpha = 0.55f),
-                sunColor.copy(alpha = 0.20f),
-                Color.Transparent,
-            ),
+            colors = listOf(sunColor.copy(alpha = 0.55f), sunColor.copy(alpha = 0.20f), Color.Transparent),
             center = center,
             radius = 42.dp.toPx() * pulse,
         ),
         radius = 42.dp.toPx() * pulse,
         center = center,
     )
-
-    // Inner Radiant Sun
-    drawCircle(
-        color = Color(0xFFFFF9C4),
-        radius = 16.dp.toPx(),
-        center = center,
-    )
-
-    drawCircle(
-        color = sunColor,
-        radius = 13.dp.toPx(),
-        center = center,
-    )
+    drawCircle(color = SUN_CORE_HIGHLIGHT, radius = 16.dp.toPx(), center = center)
+    drawCircle(color = sunColor, radius = 13.dp.toPx(), center = center)
 }
 
 private fun DrawScope.drawCrescentMoon(center: Offset, pulse: Float) {
-    // Moon Aura
     drawCircle(
         brush = Brush.radialGradient(
-            colors = listOf(
-                GoldLight.copy(alpha = 0.35f),
-                Color.Transparent,
-            ),
+            colors = listOf(GoldLight.copy(alpha = 0.35f), Color.Transparent),
             center = center,
             radius = 35.dp.toPx() * pulse,
         ),
         radius = 35.dp.toPx() * pulse,
         center = center,
     )
-
-    // Glowing Crescent Moon
     val moonRadius = 14.dp.toPx()
-    drawCircle(
-        color = Color(0xFFFFF7C2),
-        radius = moonRadius,
-        center = center,
-    )
-
-    // Subtracting inner circle for crescent curve
+    drawCircle(color = MOON_SURFACE_COLOR, radius = moonRadius, center = center)
     drawCircle(
         color = SkyIshaMid,
         radius = moonRadius * 0.85f,
-        center = Offset(center.x + moonRadius * 0.45f, center.y - moonRadius * 0.25f),
+        center = Offset(
+            center.x + moonRadius * MOON_CRATER_OFFSET_X_FACTOR,
+            center.y - moonRadius * MOON_CRATER_OFFSET_Y_FACTOR,
+        ),
     )
-
-    // Small star near the moon
     drawCircle(
         color = GoldAccent,
         radius = 2.dp.toPx(),
-        center = Offset(center.x + moonRadius * 1.3f, center.y + moonRadius * 0.2f),
+        center = Offset(
+            center.x + moonRadius * MOON_STAR_OFFSET_X_FACTOR,
+            center.y + moonRadius * MOON_STAR_OFFSET_Y_FACTOR,
+        ),
     )
 }
 
@@ -286,10 +250,7 @@ private fun DrawScope.drawHorizonAndMosque(
     } else {
         Color(0xFF030D0A)
     }
-
     val accentGoldColor = GoldAccent.copy(alpha = 0.6f)
-
-    // Horizon line glow
     drawLine(
         brush = Brush.horizontalGradient(
             colors = listOf(
@@ -302,149 +263,29 @@ private fun DrawScope.drawHorizonAndMosque(
         end = Offset(width, horizonY),
         strokeWidth = 2.5.dp.toPx(),
     )
-
+    val minaretWidth = 14.dp.toPx()
+    val minaretHeight = 85.dp.toPx()
+    val sideDomeRadius = 24.dp.toPx()
+    val sideDomeBaseOffset = 18.dp.toPx()
+    val mainDomeRadius = 42.dp.toPx()
+    val mainDomeBaseOffset = 26.dp.toPx()
+    val cx = width * 0.5f
     val mosquePath = Path().apply {
-        // Base starting point
         moveTo(0f, height)
         lineTo(0f, horizonY)
-
-        val cx = width * 0.5f
-
-        // Left ground terrace
         lineTo(cx - width * 0.38f, horizonY)
-
-        // Left Minaret 1 (Outer left)
-        val m1x = cx - width * 0.32f
-        val m1Width = 14.dp.toPx()
-        val m1Height = 85.dp.toPx()
-        lineTo(m1x - m1Width / 2, horizonY)
-        lineTo(m1x - m1Width / 2, horizonY - m1Height)
-        // Balcony 1
-        lineTo(m1x - m1Width * 0.8f, horizonY - m1Height)
-        lineTo(m1x - m1Width * 0.8f, horizonY - m1Height - 4.dp.toPx())
-        lineTo(m1x - m1Width * 0.4f, horizonY - m1Height - 4.dp.toPx())
-        // Upper spire
-        lineTo(m1x - m1Width * 0.3f, horizonY - m1Height - 22.dp.toPx())
-        lineTo(m1x, horizonY - m1Height - 34.dp.toPx()) // Tip
-        lineTo(m1x + m1Width * 0.3f, horizonY - m1Height - 22.dp.toPx())
-        lineTo(m1x + m1Width * 0.4f, horizonY - m1Height - 4.dp.toPx())
-        lineTo(m1x + m1Width * 0.8f, horizonY - m1Height - 4.dp.toPx())
-        lineTo(m1x + m1Width * 0.8f, horizonY - m1Height)
-        lineTo(m1x + m1Width / 2, horizonY - m1Height)
-        lineTo(m1x + m1Width / 2, horizonY)
-
-        // Left Side Dome
-        val d1x = cx - width * 0.18f
-        val d1Radius = 24.dp.toPx()
-        val d1BaseY = horizonY - 18.dp.toPx()
-        lineTo(d1x - d1Radius, horizonY)
-        lineTo(d1x - d1Radius, d1BaseY)
-        // Dome curve
-        cubicTo(
-            d1x - d1Radius,
-            d1BaseY - d1Radius * 1.1f,
-            d1x - d1Radius * 0.2f,
-            d1BaseY - d1Radius * 1.4f,
-            d1x,
-            d1BaseY - d1Radius * 1.55f, // Dome tip
-        )
-        cubicTo(
-            d1x + d1Radius * 0.2f,
-            d1BaseY - d1Radius * 1.4f,
-            d1x + d1Radius,
-            d1BaseY - d1Radius * 1.1f,
-            d1x + d1Radius,
-            d1BaseY,
-        )
-        lineTo(d1x + d1Radius, horizonY)
-
-        // Center Main Grand Dome
-        val mainDomeRadius = 42.dp.toPx()
-        val mainBaseY = horizonY - 26.dp.toPx()
-        val domeTipY = mainBaseY - mainDomeRadius * 1.55f
-
-        lineTo(cx - mainDomeRadius, horizonY)
-        lineTo(cx - mainDomeRadius, mainBaseY)
-        cubicTo(
-            cx - mainDomeRadius,
-            mainBaseY - mainDomeRadius * 1.15f,
-            cx - mainDomeRadius * 0.25f,
-            mainBaseY - mainDomeRadius * 1.5f,
-            cx,
-            domeTipY,
-        )
-        // Crescent Finial on center dome
-        lineTo(cx, domeTipY - 14.dp.toPx())
-        lineTo(cx, domeTipY)
-        cubicTo(
-            cx + mainDomeRadius * 0.25f,
-            mainBaseY - mainDomeRadius * 1.5f,
-            cx + mainDomeRadius,
-            mainBaseY - mainDomeRadius * 1.15f,
-            cx + mainDomeRadius,
-            mainBaseY,
-        )
-        lineTo(cx + mainDomeRadius, horizonY)
-
-        // Right Side Dome
-        val d2x = cx + width * 0.18f
-        val d2Radius = 24.dp.toPx()
-        val d2BaseY = horizonY - 18.dp.toPx()
-        lineTo(d2x - d2Radius, horizonY)
-        lineTo(d2x - d2Radius, d2BaseY)
-        cubicTo(
-            d2x - d2Radius,
-            d2BaseY - d2Radius * 1.1f,
-            d2x - d2Radius * 0.2f,
-            d2BaseY - d2Radius * 1.4f,
-            d2x,
-            d2BaseY - d2Radius * 1.55f,
-        )
-        cubicTo(
-            d2x + d2Radius * 0.2f,
-            d2BaseY - d2Radius * 1.4f,
-            d2x + d2Radius,
-            d2BaseY - d2Radius * 1.1f,
-            d2x + d2Radius,
-            d2BaseY,
-        )
-        lineTo(d2x + d2Radius, horizonY)
-
-        // Right Minaret 2 (Outer right)
-        val m2x = cx + width * 0.32f
-        val m2Width = 14.dp.toPx()
-        val m2Height = 85.dp.toPx()
-        lineTo(m2x - m2Width / 2, horizonY)
-        lineTo(m2x - m2Width / 2, horizonY - m2Height)
-        lineTo(m2x - m2Width * 0.8f, horizonY - m2Height)
-        lineTo(m2x - m2Width * 0.8f, horizonY - m2Height - 4.dp.toPx())
-        lineTo(m2x - m2Width * 0.4f, horizonY - m2Height - 4.dp.toPx())
-        lineTo(m2x - m2Width * 0.3f, horizonY - m2Height - 22.dp.toPx())
-        lineTo(m2x, horizonY - m2Height - 34.dp.toPx()) // Tip
-        lineTo(m2x + m2Width * 0.3f, horizonY - m2Height - 22.dp.toPx())
-        lineTo(m2x + m2Width * 0.4f, horizonY - m2Height - 4.dp.toPx())
-        lineTo(m2x + m2Width * 0.8f, horizonY - m2Height - 4.dp.toPx())
-        lineTo(m2x + m2Width * 0.8f, horizonY - m2Height)
-        lineTo(m2x + m2Width / 2, horizonY - m2Height)
-        lineTo(m2x + m2Width / 2, horizonY)
-
-        // Right ground terrace
+        appendMinaret(cx - width * 0.32f, horizonY, minaretWidth, minaretHeight)
+        appendDome(cx - width * 0.18f, horizonY, sideDomeBaseOffset, sideDomeRadius, false)
+        appendDome(cx, horizonY, mainDomeBaseOffset, mainDomeRadius, true)
+        appendDome(cx + width * 0.18f, horizonY, sideDomeBaseOffset, sideDomeRadius, false)
+        appendMinaret(cx + width * 0.32f, horizonY, minaretWidth, minaretHeight)
         lineTo(width, horizonY)
         lineTo(width, height)
         close()
     }
-
-    drawPath(
-        path = mosquePath,
-        color = silhouetteColor,
-    )
-
-    // Draw illuminated crescent on top of the main dome
-    val cx = width * 0.5f
-    val mainDomeRadius = 42.dp.toPx()
-    val mainBaseY = horizonY - 26.dp.toPx()
-    val domeTipY = mainBaseY - mainDomeRadius * 1.55f
-
+    drawPath(path = mosquePath, color = silhouetteColor)
+    val tipScale = 1.55f
+    val domeTipY = horizonY - mainDomeBaseOffset - mainDomeRadius * tipScale
     drawCircle(
         color = accentGoldColor,
         radius = 3.5.dp.toPx(),
@@ -452,24 +293,49 @@ private fun DrawScope.drawHorizonAndMosque(
     )
 }
 
-/**
- * Runs the star-twinkle infinite transition only while stars are visible.
- * When hidden, no transition is composed (static full brightness, unused).
- */
-@Composable
-private fun starTwinkleOrStatic(showStars: Boolean): Float {
-    if (!showStars) return 1f
-    val twinkleTransition = rememberInfiniteTransition(label = "StarTwinkle")
-    val twinkle by twinkleTransition.animateFloat(
-        initialValue = 0.3f,
-        targetValue = 1.0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1800, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "StarTwinkleValue",
-    )
-    return twinkle
+private fun Path.appendMinaret(centerX: Float, horizonY: Float, towerWidth: Float, towerHeight: Float) {
+    val halfWidth = towerWidth / 2
+    val wideOffset = towerWidth * 0.8f
+    val midOffset = towerWidth * 0.4f
+    val tipOffset = towerWidth * 0.3f
+    val balconyDepth = towerHeight * 4f / 85f
+    val spireHeight = towerHeight * 22f / 85f
+    val tipHeight = towerHeight * 34f / 85f
+    lineTo(centerX - halfWidth, horizonY)
+    lineTo(centerX - halfWidth, horizonY - towerHeight)
+    lineTo(centerX - wideOffset, horizonY - towerHeight)
+    lineTo(centerX - wideOffset, horizonY - towerHeight - balconyDepth)
+    lineTo(centerX - midOffset, horizonY - towerHeight - balconyDepth)
+    lineTo(centerX - tipOffset, horizonY - towerHeight - spireHeight)
+    lineTo(centerX, horizonY - towerHeight - tipHeight)
+    lineTo(centerX + tipOffset, horizonY - towerHeight - spireHeight)
+    lineTo(centerX + midOffset, horizonY - towerHeight - balconyDepth)
+    lineTo(centerX + wideOffset, horizonY - towerHeight - balconyDepth)
+    lineTo(centerX + wideOffset, horizonY - towerHeight)
+    lineTo(centerX + halfWidth, horizonY - towerHeight)
+    lineTo(centerX + halfWidth, horizonY)
+}
+
+private fun Path.appendDome(centerX: Float, horizonY: Float, baseOffset: Float, radius: Float, isMain: Boolean) {
+    val baseY = horizonY - baseOffset
+    val lowFactor = if (isMain) 1.15f else 1.1f
+    val highFactor = if (isMain) 1.5f else 1.4f
+    val narrowFactor = if (isMain) 0.25f else 0.2f
+    val tipFactor = 1.55f
+    val tipY = baseY - radius * tipFactor
+    val lowShoulder = radius * lowFactor
+    val highShoulder = radius * highFactor
+    val narrow = radius * narrowFactor
+    lineTo(centerX - radius, horizonY)
+    lineTo(centerX - radius, baseY)
+    cubicTo(centerX - radius, baseY - lowShoulder, centerX - narrow, baseY - highShoulder, centerX, tipY)
+    if (isMain) {
+        val finialHeight = radius * 14f / 42f
+        lineTo(centerX, tipY - finialHeight)
+        lineTo(centerX, tipY)
+    }
+    cubicTo(centerX + narrow, baseY - highShoulder, centerX + radius, baseY - lowShoulder, centerX + radius, baseY)
+    lineTo(centerX + radius, horizonY)
 }
 
 @androidx.compose.ui.tooling.preview.Preview(name = "Horizon day", showBackground = true)

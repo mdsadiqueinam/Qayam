@@ -34,7 +34,6 @@ class BootReceiver : BroadcastReceiver() {
             "android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED"
     }
 
-    @Suppress("TooGenericExceptionCaught")
     override fun onReceive(context: Context, intent: Intent) {
         val action = intent.action ?: return
         Log.d(TAG, "Boot or Time changed action received: $action. Rescheduling alarms...")
@@ -53,7 +52,11 @@ class BootReceiver : BroadcastReceiver() {
                     try {
                         schedulePrayerAlarmsUseCase(settingsRepository.snapshot())
                         Log.d(TAG, "Successfully rescheduled all upcoming prayer alarms.")
-                    } catch (e: Exception) {
+                    } catch (e: IllegalStateException) {
+                        Log.e(TAG, "Error rescheduling alarms on boot/time change", e)
+                    } catch (e: SecurityException) {
+                        Log.e(TAG, "Error rescheduling alarms on boot/time change", e)
+                    } catch (e: IllegalArgumentException) {
                         Log.e(TAG, "Error rescheduling alarms on boot/time change", e)
                     } finally {
                         pendingResult.finish()

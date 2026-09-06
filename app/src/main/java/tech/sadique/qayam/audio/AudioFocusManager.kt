@@ -19,7 +19,6 @@ class AudioFocusManager @Inject constructor(@ApplicationContext private val cont
     private var focusRequest: Any? = null
     private var focusListener: AudioManager.OnAudioFocusChangeListener? = null
 
-    @Suppress("TooGenericExceptionCaught")
     fun requestAudioFocus(highPriorityAlarm: Boolean, onFocusLoss: () -> Unit): Boolean {
         return try {
             val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
@@ -59,13 +58,18 @@ class AudioFocusManager @Inject constructor(@ApplicationContext private val cont
                 )
             }
             res == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
-        } catch (e: Exception) {
+        } catch (e: IllegalStateException) {
+            Log.w(TAG, "Audio focus request failed", e)
+            false
+        } catch (e: SecurityException) {
+            Log.w(TAG, "Audio focus request failed", e)
+            false
+        } catch (e: IllegalArgumentException) {
             Log.w(TAG, "Audio focus request failed", e)
             false
         }
     }
 
-    @Suppress("TooGenericExceptionCaught")
     fun abandonAudioFocus() {
         try {
             val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
@@ -78,7 +82,9 @@ class AudioFocusManager @Inject constructor(@ApplicationContext private val cont
                 @Suppress("DEPRECATION")
                 focusListener?.let { audioManager.abandonAudioFocus(it) }
             }
-        } catch (e: Exception) {
+        } catch (e: IllegalStateException) {
+            Log.w(TAG, "Audio focus abandon failed", e)
+        } catch (e: SecurityException) {
             Log.w(TAG, "Audio focus abandon failed", e)
         } finally {
             focusRequest = null

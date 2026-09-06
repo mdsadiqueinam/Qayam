@@ -49,7 +49,6 @@ class AdhanPlaybackService : Service() {
             }
         }
 
-        @Suppress("TooGenericExceptionCaught")
         fun stop(context: Context) {
             val intent = Intent(context, AdhanPlaybackService::class.java).apply {
                 action = ACTION_STOP_PLAYBACK
@@ -60,7 +59,9 @@ class AdhanPlaybackService : Service() {
                 } else {
                     context.startService(intent)
                 }
-            } catch (e: Exception) {
+            } catch (e: IllegalStateException) {
+                Log.w(TAG, "Could not start stop-service from background", e)
+            } catch (e: SecurityException) {
                 Log.w(TAG, "Could not start stop-service from background", e)
             }
         }
@@ -136,13 +137,14 @@ class AdhanPlaybackService : Service() {
         }
     }
 
-    @Suppress("TooGenericExceptionCaught")
     private fun releaseWakeLock() {
         try {
             if (wakeLock?.isHeld == true) {
                 wakeLock?.release()
             }
-        } catch (e: Exception) {
+        } catch (e: IllegalStateException) {
+            Log.w(TAG, "Error releasing wake lock", e)
+        } catch (e: SecurityException) {
             Log.w(TAG, "Error releasing wake lock", e)
         } finally {
             wakeLock = null

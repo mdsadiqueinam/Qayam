@@ -1,5 +1,3 @@
-
-
 package tech.sadique.qayam.ui.screens.main
 
 import androidx.compose.foundation.background
@@ -35,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.StateFlow
+import tech.sadique.qayam.data.model.PrayerType
 import tech.sadique.qayam.ui.components.MasjidHorizonCanvas
 import tech.sadique.qayam.ui.theme.DarkPrimary
 import tech.sadique.qayam.ui.theme.GoldLight
@@ -60,9 +59,6 @@ fun HeroItem(tickerState: PrayerTickerState, is24Hour: Boolean, modifier: Modifi
         shape = RoundedCornerShape(28.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
     ) {
-        // Fixed height: Box(fillMaxSize) below must resolve against a bounded
-        // height, otherwise (e.g. inside a LazyColumn item) it expands to the
-        // whole viewport and the hero swallows the screen.
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -77,75 +73,94 @@ fun HeroItem(tickerState: PrayerTickerState, is24Hour: Boolean, modifier: Modifi
                             "Animated sky for ${state?.currentPrayer?.displayName ?: "loading"} prayer"
                     },
             )
-            Column(
+            HeroOverlay(
+                currentPrayer = state?.currentPrayer,
+                currentTimeMillis = tickerState.currentTimeMillis,
+                sunAltitude = state?.sunAltitudeDegrees ?: 0.0,
+                timeFormatter = timeFormatter,
+            )
+        }
+    }
+}
+
+@Composable
+private fun HeroOverlay(
+    currentPrayer: PrayerType?,
+    currentTimeMillis: Long,
+    sunAltitude: Double,
+    timeFormatter: SimpleDateFormat,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(18.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        CurrentPrayerPill(currentPrayer = currentPrayer)
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = timeFormatter.format(Date(currentTimeMillis)),
+            style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.ExtraBold,
+            color = Color.White,
+            modifier = Modifier.testTag("live_clock_text"),
+        )
+        SunStatusText(sunAltitude = sunAltitude)
+    }
+}
+
+@Composable
+private fun CurrentPrayerPill(currentPrayer: PrayerType?) {
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = Color.Black.copy(alpha = 0.45f),
+        modifier = Modifier.testTag("current_prayer_pill"),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(18.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                // Current Active Prayer Pill (placeholder until the first tick resolves)
-                val currentPrayer = state?.currentPrayer
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = Color.Black.copy(alpha = 0.45f),
-                    modifier = Modifier.testTag("current_prayer_pill"),
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(DarkPrimary),
-                        )
-                        Text(
-                            text = currentPrayer?.let { "${it.displayName.uppercase()} TIME" }
-                                ?: "LOADING PRAYER TIMES",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.5.sp,
-                            color = Color.White,
-                        )
-                        currentPrayer?.let {
-                            Text(
-                                text = it.arabicName,
-                                style = MaterialTheme.typography.bodySmall,
-                                fontWeight = FontWeight.Bold,
-                                color = GoldLight,
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(DarkPrimary),
+            )
+            Text(
+                text = currentPrayer?.let { "${it.displayName.uppercase()} TIME" }
+                    ?: "LOADING PRAYER TIMES",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.5.sp,
+                color = Color.White,
+            )
+            if (currentPrayer != null) {
                 Text(
-                    text = timeFormatter.format(Date(tickerState.currentTimeMillis)),
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = Color.White,
-                    modifier = Modifier.testTag("live_clock_text"),
-                )
-
-                val alt = state?.sunAltitudeDegrees ?: 0.0
-                val sunStatus = remember(alt) {
-                    if (alt > 0) {
-                        String.format(Locale.US, "Sun Altitude: +%.1f° (Day)", alt)
-                    } else {
-                        String.format(Locale.US, "Sun Altitude: %.1f° (Night)", alt)
-                    }
-                }
-                Text(
-                    text = sunStatus,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color.White.copy(alpha = 0.85f),
+                    text = currentPrayer.arabicName,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold,
+                    color = GoldLight,
                 )
             }
         }
     }
+}
+
+@Composable
+private fun SunStatusText(sunAltitude: Double) {
+    val sunStatus = remember(sunAltitude) {
+        if (sunAltitude > 0) {
+            String.format(Locale.US, "Sun Altitude: +%.1f° (Day)", sunAltitude)
+        } else {
+            String.format(Locale.US, "Sun Altitude: %.1f° (Night)", sunAltitude)
+        }
+    }
+    Text(
+        text = sunStatus,
+        style = MaterialTheme.typography.labelSmall,
+        color = Color.White.copy(alpha = 0.85f),
+    )
 }
 
 @Composable

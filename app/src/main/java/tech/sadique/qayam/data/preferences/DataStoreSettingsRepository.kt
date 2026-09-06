@@ -27,9 +27,9 @@ private val Context.qayamDataStore by preferencesDataStore(
 )
 
 @Singleton
-@Suppress("TooManyFunctions")
-open class DataStoreSettingsRepository @Inject constructor(@ApplicationContext private val context: Context) :
+open class DataStoreSettingsRepository @Inject constructor(@ApplicationContext internal val appContext: Context) :
     SettingsRepository {
+    private val context: Context get() = appContext
 
     override val settings: Flow<UserSettings> = context.qayamDataStore.data
         .catch { e ->
@@ -43,11 +43,6 @@ open class DataStoreSettingsRepository @Inject constructor(@ApplicationContext p
         }
         .map { it.toUserSettings() }
         .first()
-
-    /** Clears the store back to defaults (used by tests; future Settings reset action). */
-    internal suspend fun resetToDefaults() {
-        context.qayamDataStore.edit { it.clear() }
-    }
 
     override suspend fun updateCalculationMethod(method: CalculationMethod) {
         context.qayamDataStore.edit { it[SettingsKeys.CALC_METHOD] = method.id }
@@ -94,4 +89,9 @@ open class DataStoreSettingsRepository @Inject constructor(@ApplicationContext p
             it[SettingsKeys.GPS_AUTO] = location.isGpsBased
         }
     }
+}
+
+/** Clears the store back to defaults (used by tests; future Settings reset action). */
+internal suspend fun DataStoreSettingsRepository.resetToDefaults() {
+    appContext.qayamDataStore.edit { it.clear() }
 }
