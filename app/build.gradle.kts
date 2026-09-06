@@ -5,6 +5,7 @@ plugins {
   alias(libs.plugins.secrets)
   alias(libs.plugins.ksp)
   alias(libs.plugins.hilt)
+  alias(libs.plugins.detekt)
 }
 
 android {
@@ -58,6 +59,40 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
   compilerOptions.jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
 }
 
+detekt {
+  buildUponDefaultConfig = true
+  allRules = false
+  config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
+  baseline = file("$rootDir/config/detekt/baseline.xml")
+}
+
+tasks.matching { it.name.startsWith("detekt") }.configureEach {
+  var originalJavaVersion: String? = null
+  doFirst {
+    originalJavaVersion = System.getProperty("java.version")
+    System.setProperty("java.version", "21.0.2")
+  }
+  doLast {
+    originalJavaVersion?.let { System.setProperty("java.version", it) }
+  }
+}
+
+tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
+  jvmTarget = "17"
+  reports {
+    html.required.set(true)
+    xml.required.set(true)
+    txt.required.set(false)
+    sarif.required.set(false)
+    md.required.set(false)
+  }
+}
+
+tasks.withType<io.gitlab.arturbosch.detekt.DetektCreateBaselineTask>().configureEach {
+  jvmTarget = "17"
+}
+
+
 // Configure the Secrets Gradle Plugin to use .env and .env.example files
 // to match the convention used in Web projects.
 secrets {
@@ -101,4 +136,5 @@ dependencies {
   androidTestImplementation(libs.androidx.runner)
   debugImplementation(libs.androidx.compose.ui.test.manifest)
   debugImplementation(libs.androidx.compose.ui.tooling)
+  detektPlugins(libs.detekt.formatting)
 }
