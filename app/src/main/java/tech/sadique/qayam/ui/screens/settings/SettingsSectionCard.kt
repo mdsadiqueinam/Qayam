@@ -1,4 +1,4 @@
-@file:Suppress("FunctionNaming")
+
 
 package tech.sadique.qayam.ui.screens.settings
 

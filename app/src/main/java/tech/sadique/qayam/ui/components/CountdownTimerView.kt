@@ -1,4 +1,3 @@
-@file:Suppress("FunctionNaming", "LongMethod", "MagicNumber")
 
 package tech.sadique.qayam.ui.components
 

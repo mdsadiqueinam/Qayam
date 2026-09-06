@@ -1,4 +1,3 @@
-@file:Suppress("FunctionNaming")
 
 package tech.sadique.qayam.ui.theme
 

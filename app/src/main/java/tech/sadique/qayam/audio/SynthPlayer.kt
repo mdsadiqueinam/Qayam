@@ -1,10 +1,4 @@
-@file:Suppress(
-    "CyclomaticComplexMethod",
-    "LongMethod",
-    "LoopWithTooManyJumpStatements",
-    "TooGenericExceptionCaught",
-    "MagicNumber",
-)
+
 
 package tech.sadique.qayam.audio
 

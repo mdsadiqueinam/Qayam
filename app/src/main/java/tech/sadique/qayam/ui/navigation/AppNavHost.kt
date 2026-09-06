@@ -1,4 +1,4 @@
-@file:Suppress("FunctionNaming", "MatchingDeclarationName")
+
 
 package tech.sadique.qayam.ui.navigation
 

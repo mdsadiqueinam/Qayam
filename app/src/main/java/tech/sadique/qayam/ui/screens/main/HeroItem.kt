@@ -1,4 +1,4 @@
-@file:Suppress("FunctionNaming", "LongMethod")
+
 
 package tech.sadique.qayam.ui.screens.main
 

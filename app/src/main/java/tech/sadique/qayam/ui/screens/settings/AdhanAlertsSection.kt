@@ -1,4 +1,4 @@
-@file:Suppress("FunctionNaming", "LongMethod", "CyclomaticComplexMethod")
+
 
 package tech.sadique.qayam.ui.screens.settings
 
