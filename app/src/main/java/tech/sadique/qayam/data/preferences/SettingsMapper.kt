@@ -11,7 +11,7 @@ import tech.sadique.qayam.data.model.PrayerType
 
 internal fun defaultSound(prayer: PrayerType): AdhanSoundType = when (prayer) {
     PrayerType.SUNRISE, PrayerType.GURUB_E_AFTAB -> AdhanSoundType.SILENT
-    PrayerType.ISRAQ -> AdhanSoundType.GENTLE_CHIME
+    PrayerType.ISRAQ -> AdhanSoundType.MAKKAH
     PrayerType.ASR -> AdhanSoundType.MADINAH
     PrayerType.MAGHRIB -> AdhanSoundType.AL_AQSA
     else -> AdhanSoundType.MAKKAH

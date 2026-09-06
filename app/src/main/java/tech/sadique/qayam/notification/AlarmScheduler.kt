@@ -9,7 +9,7 @@ interface AlarmScheduler {
     fun scheduleTestAlarm(
         delaySeconds: Int = 10,
         prayerType: PrayerType = PrayerType.FAJR,
-        soundType: AdhanSoundType = AdhanSoundType.TAKBEER_ONLY,
+        soundType: AdhanSoundType = AdhanSoundType.MAKKAH,
     )
     fun canScheduleExactAlarms(): Boolean
     fun areNotificationsEnabled(): Boolean

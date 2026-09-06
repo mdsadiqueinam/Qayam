@@ -35,11 +35,9 @@ enum class PrayerType(
 }
 
 enum class AdhanSoundType(val id: String, val title: String, val description: String) {
-    MAKKAH("makkah", "Makkah Al-Mukarramah", "Melodious harmonic Adhan call"),
-    MADINAH("madinah", "Madinah Al-Munawwarah", "Traditional calming Adhan call"),
-    AL_AQSA("al_aqsa", "Al-Aqsa Al-Quds", "Rich resonant Palestinian melody"),
-    TAKBEER_ONLY("takbeer", "Short Takbeer Call", "Allahu Akbar (4x Takbeer call)"),
-    GENTLE_CHIME("chime", "Gentle Islamic Chime", "Soft acoustic bell tones"),
+    MAKKAH("makkah", "Makkah Al-Mukarramah", "Adhan from Masjid Al-Haram"),
+    MADINAH("madinah", "Madinah Al-Munawwarah", "Adhan from Al-Masjid An-Nabawi"),
+    AL_AQSA("al_aqsa", "Al-Aqsa Al-Quds", "Adhan from Al-Aqsa"),
     SYSTEM_ALARM("system", "Device Alarm Ringtone", "Default system alarm audio"),
     VIBRATE_ONLY("vibrate", "Vibrate Only", "Haptic notification without sound"),
     SILENT("silent", "Silent", "Visual notification only"),

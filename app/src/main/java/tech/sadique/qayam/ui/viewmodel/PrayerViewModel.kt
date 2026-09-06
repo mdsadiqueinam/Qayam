@@ -125,7 +125,7 @@ class PrayerViewModel @Inject constructor(
 
     fun scheduleTestAlarm(delaySeconds: Int = 10) {
         val nextPrayer = tickerState.value.currentState?.nextPrayer ?: PrayerType.FAJR
-        val soundType = _uiState.value.settings.prayerAlertSounds[nextPrayer] ?: AdhanSoundType.TAKBEER_ONLY
+        val soundType = _uiState.value.settings.prayerAlertSounds[nextPrayer] ?: AdhanSoundType.MAKKAH
         alarmScheduler.scheduleTestAlarm(
             delaySeconds = delaySeconds,
             prayerType = nextPrayer,

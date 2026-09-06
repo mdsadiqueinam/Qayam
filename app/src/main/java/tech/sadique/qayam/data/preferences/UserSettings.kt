@@ -26,7 +26,7 @@ data class UserSettings(
     val prayerAlertSounds: Map<PrayerType, AdhanSoundType> = mapOf(
         PrayerType.FAJR to AdhanSoundType.MAKKAH,
         PrayerType.SUNRISE to AdhanSoundType.SILENT,
-        PrayerType.ISRAQ to AdhanSoundType.GENTLE_CHIME,
+        PrayerType.ISRAQ to AdhanSoundType.MAKKAH,
         PrayerType.DHUHR to AdhanSoundType.MAKKAH,
         PrayerType.ASR to AdhanSoundType.MADINAH,
         PrayerType.GURUB_E_AFTAB to AdhanSoundType.SILENT,
