@@ -9,12 +9,21 @@ import android.os.IBinder
 import android.os.PowerManager
 import android.util.Log
 import androidx.core.app.ServiceCompat
-import tech.sadique.qayam.audio.AdhanAudioSynthesizer
+import dagger.hilt.android.AndroidEntryPoint
+import tech.sadique.qayam.audio.AudioPlayer
 import tech.sadique.qayam.data.model.AdhanSoundType
 import tech.sadique.qayam.data.model.PrayerType
-import tech.sadique.qayam.notification.AdhanNotificationManager
+import tech.sadique.qayam.notification.PrayerNotificationNotifier
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class AdhanPlaybackService : Service() {
+
+    @Inject
+    lateinit var audioPlayer: AudioPlayer
+
+    @Inject
+    lateinit var notifier: PrayerNotificationNotifier
 
     companion object {
         private const val TAG = "AdhanPlaybackService"
@@ -69,7 +78,7 @@ class AdhanPlaybackService : Service() {
 
         when (action) {
             ACTION_STOP_PLAYBACK,
-            AdhanNotificationManager.ACTION_STOP_ADHAN -> {
+            PrayerNotificationNotifier.ACTION_STOP_ADHAN -> {
                 stopPlaybackAndFinish()
                 return START_NOT_STICKY
             }
@@ -85,9 +94,8 @@ class AdhanPlaybackService : Service() {
                 acquireWakeLock()
 
                 // Start as Foreground Service with prayer alert notification
-                val notificationManager = AdhanNotificationManager(applicationContext)
-                val notification = notificationManager.buildPrayerNotification(prayerType, soundType, highPriority)
-                val notificationId = AdhanNotificationManager.NOTIFICATION_ID_BASE + prayerType.ordinal
+                val notification = notifier.buildPrayerNotification(prayerType, soundType, highPriority)
+                val notificationId = PrayerNotificationNotifier.NOTIFICATION_ID_BASE + prayerType.ordinal
 
                 val foregroundServiceType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
@@ -103,10 +111,9 @@ class AdhanPlaybackService : Service() {
                 )
 
                 // Play Audio
-                AdhanAudioSynthesizer.playSound(
-                    context = applicationContext,
+                audioPlayer.playSound(
                     soundType = soundType,
-                    highPriorityAlarm = highPriority,
+                    highPriority = highPriority,
                     volume = 1.0f
                 ) {
                     Log.d(TAG, "Audio synthesis complete, stopping playback service")
@@ -144,7 +151,7 @@ class AdhanPlaybackService : Service() {
     }
 
     private fun stopPlaybackAndFinish() {
-        AdhanAudioSynthesizer.stopSound()
+        audioPlayer.stopSound()
         releaseWakeLock()
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()

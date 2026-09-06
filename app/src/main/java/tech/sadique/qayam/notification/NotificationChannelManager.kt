@@ -1,47 +1,28 @@
-package tech.sadique.qayam
+package tech.sadique.qayam.notification
 
-import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.Context
 import android.media.AudioAttributes
 import android.os.Build
 import androidx.core.content.getSystemService
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
+import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class SalahApp : Application() {
-
-    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-
+@Singleton
+class NotificationChannelManager @Inject constructor(
+    @ApplicationContext private val context: Context
+) {
     companion object {
         const val ADHAN_CHANNEL_ID = "salah_adhan_channel_high_priority"
         const val ADHAN_VIBRATE_CHANNEL_ID = "salah_adhan_channel_vibrate"
         const val ADHAN_SILENT_CHANNEL_ID = "salah_adhan_channel_silent"
     }
 
-    override fun onCreate() {
-        super.onCreate()
-        createNotificationChannels()
-        armUpcomingAlarms()
-    }
-
-    private fun armUpcomingAlarms() {
-        applicationScope.launch {
-            try {
-                val appSettings = tech.sadique.qayam.data.preferences.AppSettings(this@SalahApp)
-                val notificationManager = tech.sadique.qayam.notification.AdhanNotificationManager(this@SalahApp)
-                notificationManager.scheduleUpcomingAlarms(appSettings.snapshot())
-            } catch (e: Exception) {
-                android.util.Log.e("SalahApp", "Failed to schedule upcoming alarms on app launch", e)
-            }
-        }
-    }
-
-    private fun createNotificationChannels() {
+    fun createNotificationChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val notificationManager = getSystemService<NotificationManager>() ?: return
+            val notificationManager = context.getSystemService<NotificationManager>() ?: return
 
             // High Priority Channel for Audible Adhan
             val adhanAudioAttributes = AudioAttributes.Builder()
@@ -57,7 +38,7 @@ class SalahApp : Application() {
                 description = "Plays Adhan audio and high-priority alerts for Salah prayer times"
                 enableVibration(true)
                 vibrationPattern = longArrayOf(0, 500, 200, 500, 200, 1000)
-                setSound(null, adhanAudioAttributes) // Audio played directly via AdhanAudioSynthesizer / Foreground Service
+                setSound(null, adhanAudioAttributes)
                 lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
                 setShowBadge(true)
             }

@@ -16,7 +16,7 @@ import org.robolectric.annotation.GraphicsMode
 import tech.sadique.qayam.data.calculator.PrayerTimeCalculator
 import tech.sadique.qayam.data.model.CalculationMethod
 import tech.sadique.qayam.data.model.JuristicMethod
-import tech.sadique.qayam.ui.screens.HeroItem
+import tech.sadique.qayam.ui.screens.main.HeroItem
 import tech.sadique.qayam.ui.theme.SalahTheme
 import tech.sadique.qayam.ui.viewmodel.PrayerTickerState
 import java.util.Calendar

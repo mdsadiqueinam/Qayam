@@ -2,13 +2,14 @@ package tech.sadique.qayam
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import kotlinx.coroutines.runBlocking
 import tech.sadique.qayam.data.model.AdhanSoundType
 import tech.sadique.qayam.data.model.AppThemeMode
 import tech.sadique.qayam.data.model.CalculationMethod
 import tech.sadique.qayam.data.model.HighLatitudeRule
 import tech.sadique.qayam.data.model.JuristicMethod
 import tech.sadique.qayam.data.model.PrayerType
-import tech.sadique.qayam.data.preferences.AppSettings
+import tech.sadique.qayam.data.preferences.DataStoreSettingsRepository
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -20,9 +21,9 @@ import org.robolectric.annotation.Config
 class SettingsDefaultsTest {
 
     @Test
-    fun `fresh settings match documented defaults`() {
+    fun `fresh settings match documented defaults`() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        val settings = AppSettings(context).settings.value
+        val settings = DataStoreSettingsRepository(context).snapshot()
 
         assertEquals(CalculationMethod.MUSLIM_WORLD_LEAGUE, settings.calculationMethod)
         assertEquals(JuristicMethod.STANDARD, settings.juristicMethod)

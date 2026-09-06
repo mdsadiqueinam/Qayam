@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import tech.sadique.qayam.data.model.CalculationMethod
 import tech.sadique.qayam.data.model.PrayerType
-import tech.sadique.qayam.data.preferences.AppSettings
+import tech.sadique.qayam.data.preferences.DataStoreSettingsRepository
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -20,12 +20,12 @@ class DataStoreRoundtripTest {
     @Test
     fun `datastore write then snapshot roundtrip`() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        val settings = AppSettings(context)
+        val settings = DataStoreSettingsRepository(context)
         try {
             settings.updateCalculationMethod(CalculationMethod.KARACHI)
             settings.updatePrayerMinuteOffset(PrayerType.FAJR, 5)
 
-            val snapshot = AppSettings(context).snapshot()
+            val snapshot = DataStoreSettingsRepository(context).snapshot()
             assertEquals(CalculationMethod.KARACHI, snapshot.calculationMethod)
             assertEquals(5, snapshot.minuteOffsets[PrayerType.FAJR])
         } finally {

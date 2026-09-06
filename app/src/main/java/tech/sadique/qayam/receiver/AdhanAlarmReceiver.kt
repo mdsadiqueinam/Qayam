@@ -4,23 +4,45 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
-import tech.sadique.qayam.audio.AdhanAudioSynthesizer
+import dagger.hilt.android.AndroidEntryPoint
+import tech.sadique.qayam.audio.AudioPlayer
 import tech.sadique.qayam.data.model.AdhanSoundType
 import tech.sadique.qayam.data.model.PrayerType
-import tech.sadique.qayam.data.preferences.AppSettings
-import tech.sadique.qayam.notification.AdhanNotificationManager
-
+import tech.sadique.qayam.data.preferences.SettingsRepository
+import tech.sadique.qayam.di.ApplicationScope
+import tech.sadique.qayam.notification.AlarmScheduler
+import tech.sadique.qayam.notification.ExactAlarmGateway
+import tech.sadique.qayam.notification.PrayerNotificationNotifier
+import tech.sadique.qayam.notification.SchedulePrayerAlarmsUseCase
 import tech.sadique.qayam.service.AdhanPlaybackService
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class AdhanAlarmReceiver : BroadcastReceiver() {
+
+    @Inject
+    lateinit var settingsRepository: SettingsRepository
+
+    @Inject
+    lateinit var alarmScheduler: AlarmScheduler
+
+    @Inject
+    lateinit var schedulePrayerAlarmsUseCase: SchedulePrayerAlarmsUseCase
+
+    @Inject
+    lateinit var notifier: PrayerNotificationNotifier
+
+    @Inject
+    lateinit var audioPlayer: AudioPlayer
+
+    @Inject
+    @ApplicationScope
+    lateinit var receiverScope: CoroutineScope
 
     companion object {
         const val ACTION_ADHAN_ALARM = "tech.sadique.qayam.ACTION_ADHAN_ALARM"
-        private val receiverScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     }
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -38,20 +60,17 @@ class AdhanAlarmReceiver : BroadcastReceiver() {
         val action = intent.action ?: return
         Log.d("AdhanReceiver", "Received action: $action")
 
-        val appSettings = AppSettings(context.applicationContext)
-        val notificationManager = AdhanNotificationManager(context.applicationContext)
-
         when (action) {
-            AdhanNotificationManager.ACTION_STOP_ADHAN -> {
+            PrayerNotificationNotifier.ACTION_STOP_ADHAN -> {
                 AdhanPlaybackService.stop(context.applicationContext)
-                AdhanAudioSynthesizer.stopSound()
+                audioPlayer.stopSound()
             }
 
             ACTION_ADHAN_ALARM -> {
-                val prayerId = intent.getStringExtra(AdhanNotificationManager.EXTRA_PRAYER_ID) ?: PrayerType.FAJR.id
+                val prayerId = intent.getStringExtra(ExactAlarmGateway.EXTRA_PRAYER_ID) ?: PrayerType.FAJR.id
                 val prayerType = PrayerType.fromId(prayerId)
 
-                val currentSettings = appSettings.snapshot()
+                val currentSettings = settingsRepository.snapshot()
                 val isEnabled = currentSettings.prayerAlertEnabled[prayerType] ?: prayerType.defaultAlertEnabled
 
                 if (isEnabled) {
@@ -66,8 +85,8 @@ class AdhanAlarmReceiver : BroadcastReceiver() {
                             highPriority = highPriority
                         )
                     } else {
-                        if (notificationManager.areNotificationsEnabled()) {
-                            notificationManager.showPrayerNotification(prayerType, soundType, highPriority)
+                        if (alarmScheduler.areNotificationsEnabled()) {
+                            notifier.showPrayerNotification(prayerType, soundType, highPriority)
                         } else {
                             Log.w("AdhanReceiver", "POST_NOTIFICATIONS denied; skipping visual alert for ${prayerType.id}")
                         }
@@ -75,7 +94,7 @@ class AdhanAlarmReceiver : BroadcastReceiver() {
                 }
 
                 // Reschedule for subsequent prayers
-                notificationManager.scheduleUpcomingAlarms(currentSettings)
+                schedulePrayerAlarmsUseCase(currentSettings)
             }
         }
     }

@@ -4,14 +4,26 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
-import tech.sadique.qayam.data.preferences.AppSettings
-import tech.sadique.qayam.notification.AdhanNotificationManager
+import dagger.hilt.android.AndroidEntryPoint
+import tech.sadique.qayam.data.preferences.SettingsRepository
+import tech.sadique.qayam.di.ApplicationScope
+import tech.sadique.qayam.notification.SchedulePrayerAlarmsUseCase
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class BootReceiver : BroadcastReceiver() {
+
+    @Inject
+    lateinit var settingsRepository: SettingsRepository
+
+    @Inject
+    lateinit var schedulePrayerAlarmsUseCase: SchedulePrayerAlarmsUseCase
+
+    @Inject
+    @ApplicationScope
+    lateinit var receiverScope: CoroutineScope
 
     companion object {
         private const val TAG = "BootReceiver"
@@ -19,7 +31,6 @@ class BootReceiver : BroadcastReceiver() {
         // avoid referencing S-only constants from all code paths.
         private const val ACTION_SCHEDULE_EXACT_ALARM_STATE_CHANGED =
             "android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED"
-        private val receiverScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     }
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -37,9 +48,7 @@ class BootReceiver : BroadcastReceiver() {
                 val pendingResult = goAsync()
                 receiverScope.launch {
                     try {
-                        val appSettings = AppSettings(context.applicationContext)
-                        val notificationManager = AdhanNotificationManager(context.applicationContext)
-                        notificationManager.scheduleUpcomingAlarms(appSettings.snapshot())
+                        schedulePrayerAlarmsUseCase(settingsRepository.snapshot())
                         Log.d(TAG, "Successfully rescheduled all upcoming prayer alarms.")
                     } catch (e: Exception) {
                         Log.e(TAG, "Error rescheduling alarms on boot/time change", e)
