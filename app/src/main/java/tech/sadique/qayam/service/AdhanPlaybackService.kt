@@ -9,12 +9,21 @@ import android.os.IBinder
 import android.os.PowerManager
 import android.util.Log
 import androidx.core.app.ServiceCompat
-import tech.sadique.qayam.audio.AdhanAudioSynthesizer
+import dagger.hilt.android.AndroidEntryPoint
+import tech.sadique.qayam.audio.AudioPlayer
 import tech.sadique.qayam.data.model.AdhanSoundType
 import tech.sadique.qayam.data.model.PrayerType
-import tech.sadique.qayam.notification.AdhanNotificationManager
+import tech.sadique.qayam.notification.PrayerNotificationNotifier
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class AdhanPlaybackService : Service() {
+
+    @Inject
+    lateinit var audioPlayer: AudioPlayer
+
+    @Inject
+    lateinit var notifier: PrayerNotificationNotifier
 
     companion object {
         private const val TAG = "AdhanPlaybackService"
@@ -24,12 +33,9 @@ class AdhanPlaybackService : Service() {
         const val EXTRA_SOUND_TYPE = "extra_sound_type"
         const val EXTRA_HIGH_PRIORITY = "extra_high_priority"
 
-        fun start(
-            context: Context,
-            prayerType: PrayerType,
-            soundType: AdhanSoundType,
-            highPriority: Boolean
-        ) {
+        private const val WAKELOCK_TIMEOUT_MS = 180_000L
+
+        fun start(context: Context, prayerType: PrayerType, soundType: AdhanSoundType, highPriority: Boolean) {
             val intent = Intent(context, AdhanPlaybackService::class.java).apply {
                 action = ACTION_START_PLAYBACK
                 putExtra(EXTRA_PRAYER_ID, prayerType.id)
@@ -53,7 +59,9 @@ class AdhanPlaybackService : Service() {
                 } else {
                     context.startService(intent)
                 }
-            } catch (e: Exception) {
+            } catch (e: IllegalStateException) {
+                Log.w(TAG, "Could not start stop-service from background", e)
+            } catch (e: SecurityException) {
                 Log.w(TAG, "Could not start stop-service from background", e)
             }
         }
@@ -69,9 +77,9 @@ class AdhanPlaybackService : Service() {
 
         when (action) {
             ACTION_STOP_PLAYBACK,
-            AdhanNotificationManager.ACTION_STOP_ADHAN -> {
+            PrayerNotificationNotifier.ACTION_STOP_ADHAN,
+            -> {
                 stopPlaybackAndFinish()
-                return START_NOT_STICKY
             }
 
             ACTION_START_PLAYBACK -> {
@@ -85,9 +93,8 @@ class AdhanPlaybackService : Service() {
                 acquireWakeLock()
 
                 // Start as Foreground Service with prayer alert notification
-                val notificationManager = AdhanNotificationManager(applicationContext)
-                val notification = notificationManager.buildPrayerNotification(prayerType, soundType, highPriority)
-                val notificationId = AdhanNotificationManager.NOTIFICATION_ID_BASE + prayerType.ordinal
+                val notification = notifier.buildPrayerNotification(prayerType, soundType, highPriority)
+                val notificationId = PrayerNotificationNotifier.NOTIFICATION_ID_BASE + prayerType.ordinal
 
                 val foregroundServiceType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
@@ -99,15 +106,14 @@ class AdhanPlaybackService : Service() {
                     this,
                     notificationId,
                     notification,
-                    foregroundServiceType
+                    foregroundServiceType,
                 )
 
                 // Play Audio
-                AdhanAudioSynthesizer.playSound(
-                    context = applicationContext,
+                audioPlayer.playSound(
                     soundType = soundType,
-                    highPriorityAlarm = highPriority,
-                    volume = 1.0f
+                    highPriority = highPriority,
+                    volume = 1.0f,
                 ) {
                     Log.d(TAG, "Audio synthesis complete, stopping playback service")
                     stopPlaybackAndFinish()
@@ -123,10 +129,10 @@ class AdhanPlaybackService : Service() {
             val powerManager = getSystemService(Context.POWER_SERVICE) as? PowerManager
             wakeLock = powerManager?.newWakeLock(
                 PowerManager.PARTIAL_WAKE_LOCK,
-                "qayam:AdhanPlaybackWakeLock"
+                "qayam:AdhanPlaybackWakeLock",
             )?.apply {
                 setReferenceCounted(false)
-                acquire(3 * 60 * 1000L) // 3 minutes timeout safety
+                acquire(WAKELOCK_TIMEOUT_MS)
             }
         }
     }
@@ -136,7 +142,9 @@ class AdhanPlaybackService : Service() {
             if (wakeLock?.isHeld == true) {
                 wakeLock?.release()
             }
-        } catch (e: Exception) {
+        } catch (e: IllegalStateException) {
+            Log.w(TAG, "Error releasing wake lock", e)
+        } catch (e: SecurityException) {
             Log.w(TAG, "Error releasing wake lock", e)
         } finally {
             wakeLock = null
@@ -144,7 +152,7 @@ class AdhanPlaybackService : Service() {
     }
 
     private fun stopPlaybackAndFinish() {
-        AdhanAudioSynthesizer.stopSound()
+        audioPlayer.stopSound()
         releaseWakeLock()
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()

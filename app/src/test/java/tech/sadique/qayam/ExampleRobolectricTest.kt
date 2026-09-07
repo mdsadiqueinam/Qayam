@@ -2,11 +2,6 @@ package tech.sadique.qayam
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
-import tech.sadique.qayam.data.calculator.PrayerTimeCalculator
-import tech.sadique.qayam.data.model.CalculationMethod
-import tech.sadique.qayam.data.model.HighLatitudeRule
-import tech.sadique.qayam.data.model.JuristicMethod
-import tech.sadique.qayam.data.model.PrayerType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -15,6 +10,11 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import tech.sadique.qayam.data.calculator.PrayerTimeCalculator
+import tech.sadique.qayam.data.model.CalculationMethod
+import tech.sadique.qayam.data.model.HighLatitudeRule
+import tech.sadique.qayam.data.model.JuristicMethod
+import tech.sadique.qayam.data.model.PrayerType
 import java.util.Calendar
 
 @RunWith(RobolectricTestRunner::class)
@@ -41,7 +41,7 @@ class ExampleRobolectricTest {
             timezoneOffsetHours = 3.0,
             method = CalculationMethod.UMM_AL_QURA,
             juristic = JuristicMethod.STANDARD,
-            highLatitudeRule = HighLatitudeRule.ANGLE_BASED
+            highLatitudeRule = HighLatitudeRule.ANGLE_BASED,
         )
 
         assertNotNull(schedule)
@@ -80,15 +80,15 @@ class ExampleRobolectricTest {
     @Test
     fun `test build prayer notification for audible adhan uses primary channel and has stop action`() {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        val notificationManager = tech.sadique.qayam.notification.AdhanNotificationManager(context)
+        val notificationManager = tech.sadique.qayam.notification.PrayerNotificationNotifier(context)
         val notification = notificationManager.buildPrayerNotification(
             prayerType = PrayerType.FAJR,
             soundType = tech.sadique.qayam.data.model.AdhanSoundType.MAKKAH,
-            highPriority = true
+            highPriority = true,
         )
 
         assertNotNull(notification)
-        assertEquals(SalahApp.ADHAN_CHANNEL_ID, notification.channelId)
+        assertEquals(QayamApp.ADHAN_CHANNEL_ID, notification.channelId)
         assertEquals(android.R.drawable.ic_lock_idle_alarm, notification.smallIcon.resId)
         assertNotNull(notification.actions)
         assertTrue(notification.actions.any { it.title.toString().contains("Stop Adhan") })
@@ -97,15 +97,15 @@ class ExampleRobolectricTest {
     @Test
     fun `test build prayer notification for SILENT uses silent channel and has no stop action`() {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        val notificationManager = tech.sadique.qayam.notification.AdhanNotificationManager(context)
+        val notificationManager = tech.sadique.qayam.notification.PrayerNotificationNotifier(context)
         val notification = notificationManager.buildPrayerNotification(
             prayerType = PrayerType.DHUHR,
             soundType = tech.sadique.qayam.data.model.AdhanSoundType.SILENT,
-            highPriority = true
+            highPriority = true,
         )
 
         assertNotNull(notification)
-        assertEquals(SalahApp.ADHAN_SILENT_CHANNEL_ID, notification.channelId)
+        assertEquals(QayamApp.ADHAN_SILENT_CHANNEL_ID, notification.channelId)
         val hasStopAction = notification.actions?.any { it.title.toString().contains("Stop Adhan") } ?: false
         assertFalse(hasStopAction)
     }
@@ -113,15 +113,15 @@ class ExampleRobolectricTest {
     @Test
     fun `test build prayer notification for VIBRATE_ONLY uses vibrate channel and has no stop action`() {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        val notificationManager = tech.sadique.qayam.notification.AdhanNotificationManager(context)
+        val notificationManager = tech.sadique.qayam.notification.PrayerNotificationNotifier(context)
         val notification = notificationManager.buildPrayerNotification(
             prayerType = PrayerType.ASR,
             soundType = tech.sadique.qayam.data.model.AdhanSoundType.VIBRATE_ONLY,
-            highPriority = true
+            highPriority = true,
         )
 
         assertNotNull(notification)
-        assertEquals(SalahApp.ADHAN_VIBRATE_CHANNEL_ID, notification.channelId)
+        assertEquals(QayamApp.ADHAN_VIBRATE_CHANNEL_ID, notification.channelId)
         val hasStopAction = notification.actions?.any { it.title.toString().contains("Stop Adhan") } ?: false
         assertFalse(hasStopAction)
     }

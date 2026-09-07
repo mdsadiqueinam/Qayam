@@ -4,14 +4,12 @@ import androidx.compose.ui.graphics.Color
 
 // Brand Emerald & Gold Palette
 val EmeraldPrimary = Color(0xFF0D6E54)
-val EmeraldLight = Color(0xFF159976)
 val EmeraldDark = Color(0xFF073F30)
 val EmeraldContainer = Color(0xFFD0F4E8)
 val OnEmeraldContainer = Color(0xFF002117)
 
 val GoldAccent = Color(0xFFE5B034)
 val GoldLight = Color(0xFFFFD56B)
-val GoldDark = Color(0xFF9E7200)
 
 val SandBackgroundLight = Color(0xFFF9F9F6)
 val SandSurfaceLight = Color(0xFFFFFFFF)

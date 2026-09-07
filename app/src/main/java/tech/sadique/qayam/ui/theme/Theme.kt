@@ -1,15 +1,12 @@
+
 package tech.sadique.qayam.ui.theme
 
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import tech.sadique.qayam.data.model.AppThemeMode
 
 private val LightColorScheme = lightColorScheme(
@@ -30,7 +27,7 @@ private val LightColorScheme = lightColorScheme(
     surfaceVariant = SandSurfaceVariant,
     onSurfaceVariant = Color(0xFF404944),
     outline = Color(0xFF707973),
-    outlineVariant = Color(0xFFC0C9C2)
+    outlineVariant = Color(0xFFC0C9C2),
 )
 
 private val DarkColorScheme = darkColorScheme(
@@ -51,7 +48,7 @@ private val DarkColorScheme = darkColorScheme(
     surfaceVariant = DarkSurfaceVariant,
     onSurfaceVariant = Color(0xFFBFC9C2),
     outline = Color(0xFF89938D),
-    outlineVariant = Color(0xFF404944)
+    outlineVariant = Color(0xFF404944),
 )
 
 private val NightMosqueColorScheme = darkColorScheme(
@@ -72,20 +69,14 @@ private val NightMosqueColorScheme = darkColorScheme(
     surfaceVariant = MosqueSurfaceVariant,
     onSurfaceVariant = Color(0xFFBCC7C1),
     outline = Color(0xFF84938B),
-    outlineVariant = Color(0xFF284841)
+    outlineVariant = Color(0xFF284841),
 )
 
 @Composable
-fun SalahTheme(
-    themeMode: AppThemeMode = AppThemeMode.SYSTEM,
-    content: @Composable () -> Unit
-) {
+fun SalahTheme(themeMode: AppThemeMode = AppThemeMode.SYSTEM, content: @Composable () -> Unit) {
+    // Brand-only schemes (no dynamic color): the emerald/gold identity is
+    // intentional across all modes, including Android 12+.
     val systemDark = isSystemInDarkTheme()
-    val isDark = when (themeMode) {
-        AppThemeMode.SYSTEM -> systemDark
-        AppThemeMode.LIGHT -> false
-        AppThemeMode.DARK, AppThemeMode.NIGHT_MOSQUE -> true
-    }
 
     val colorScheme = when (themeMode) {
         AppThemeMode.NIGHT_MOSQUE -> NightMosqueColorScheme
@@ -97,6 +88,6 @@ fun SalahTheme(
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
-        content = content
+        content = content,
     )
 }

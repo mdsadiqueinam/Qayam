@@ -1,237 +1,141 @@
 package tech.sadique.qayam.ui.viewmodel
 
-import android.app.Application
-import android.util.Log
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import tech.sadique.qayam.audio.AdhanAudioSynthesizer
-import tech.sadique.qayam.data.calculator.PrayerTimeCalculator
-import tech.sadique.qayam.data.location.LocationService
-import tech.sadique.qayam.data.model.AdhanSoundType
-import tech.sadique.qayam.data.model.AppThemeMode
-import tech.sadique.qayam.data.model.CalculationMethod
-import tech.sadique.qayam.data.model.CurrentPrayerState
-import tech.sadique.qayam.data.model.HighLatitudeRule
-import tech.sadique.qayam.data.model.JuristicMethod
-import tech.sadique.qayam.data.model.LocationInfo
-import tech.sadique.qayam.data.model.PrayerSchedule
-import tech.sadique.qayam.data.model.PrayerType
-import tech.sadique.qayam.data.preferences.AppSettings
-import tech.sadique.qayam.data.preferences.UserSettings
-import tech.sadique.qayam.notification.AdhanNotificationManager
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import tech.sadique.qayam.audio.AudioPreviewController
+import tech.sadique.qayam.data.model.AdhanSoundType
+import tech.sadique.qayam.data.model.CurrentPrayerState
+import tech.sadique.qayam.data.model.PrayerSchedule
+import tech.sadique.qayam.data.model.PrayerType
+import tech.sadique.qayam.data.preferences.SettingsRepository
+import tech.sadique.qayam.data.preferences.UserSettings
+import tech.sadique.qayam.domain.RecalculateScheduleUseCase
+import tech.sadique.qayam.domain.RefreshLocationUseCase
+import tech.sadique.qayam.notification.AlarmScheduler
+import tech.sadique.qayam.notification.SchedulePrayerAlarmsUseCase
 import java.util.Calendar
-import kotlin.time.Duration.Companion.seconds
+import javax.inject.Inject
 
 data class PrayerUiState(
     val settings: UserSettings = UserSettings(),
     val schedule: PrayerSchedule? = null,
-    val currentState: CurrentPrayerState? = null,
-    val currentTimeCalendar: Calendar = Calendar.getInstance(),
     val isLocationLoading: Boolean = false,
     val locationErrorMessage: String? = null,
     val isPlayingSound: Boolean = false,
-    val playingSoundType: AdhanSoundType? = null
+    val playingSoundType: AdhanSoundType? = null,
 )
 
-class PrayerViewModel(application: Application) : AndroidViewModel(application) {
+/**
+ * Per-second clock state, collected only by the composables that render
+ * live time (clock, countdown, horizon). Kept separate from [PrayerUiState]
+ * so the rest of the UI does not recompose every second.
+ */
+data class PrayerTickerState(
+    val currentTimeMillis: Long = System.currentTimeMillis(),
+    val currentState: CurrentPrayerState? = null,
+)
 
-    private val appSettings = AppSettings(application.applicationContext)
-    private val locationService = LocationService(application.applicationContext)
-    private val notificationManager = AdhanNotificationManager(application.applicationContext)
+@HiltViewModel
+class PrayerViewModel @Inject constructor(
+    private val settingsRepository: SettingsRepository,
+    private val schedulePrayerAlarmsUseCase: SchedulePrayerAlarmsUseCase,
+    private val alarmScheduler: AlarmScheduler,
+    private val recalculateScheduleUseCase: RecalculateScheduleUseCase,
+    private val refreshLocationUseCase: RefreshLocationUseCase,
+    private val audioPreviewController: AudioPreviewController,
+    private val tickerManager: TickerManager,
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PrayerUiState())
     val uiState: StateFlow<PrayerUiState> = _uiState.asStateFlow()
 
-    private var tickerJob: Job? = null
+    val tickerState: StateFlow<PrayerTickerState> = tickerManager.tickerState
+
+    val settingsUpdater = SettingsUpdateFacade(settingsRepository, viewModelScope)
 
     init {
-        // Observe settings changes
+        var firstSettings = true
         viewModelScope.launch {
-            appSettings.settings.collect { newSettings ->
+            settingsRepository.settings.collect { newSettings ->
                 _uiState.value = _uiState.value.copy(settings = newSettings)
                 recalculateSchedule()
-                notificationManager.scheduleUpcomingAlarms(appSettings)
+                schedulePrayerAlarmsUseCase(newSettings)
+                if (firstSettings) {
+                    firstSettings = false
+                    if (newSettings.isGpsAuto) refreshGpsLocation()
+                }
             }
         }
-        // Observe audio state
+
         viewModelScope.launch {
-            AdhanAudioSynthesizer.isPlaying.collect { isPlaying ->
+            audioPreviewController.isPlayingSound.collect { isPlaying ->
                 _uiState.value = _uiState.value.copy(isPlayingSound = isPlaying)
             }
         }
         viewModelScope.launch {
-            AdhanAudioSynthesizer.currentlyPlayingSound.collect { sound ->
+            audioPreviewController.playingSoundType.collect { sound ->
                 _uiState.value = _uiState.value.copy(playingSoundType = sound)
             }
         }
 
-        // Start real-time 1-second clock ticker
-        startClockTicker()
-
-        // Auto fetch GPS location if enabled (read persisted value, not the
-        // default _uiState which is isGpsAuto=true before the flow emits).
-        if (appSettings.settings.value.isGpsAuto) {
-            refreshGpsLocation()
-        }
-    }
-
-    private fun startClockTicker() {
-        tickerJob?.cancel()
-        tickerJob = viewModelScope.launch {
-            while (isActive) {
-                val now = Calendar.getInstance()
-                val schedule = _uiState.value.schedule
-                val loc = _uiState.value.settings.currentLocation
-
-                val currentState = if (schedule != null) {
-                    PrayerTimeCalculator.calculateCurrentState(
-                        currentTime = now,
-                        schedule = schedule,
-                        latitude = loc.latitude,
-                        longitude = loc.longitude
-                    )
-                } else null
-
-                _uiState.value = _uiState.value.copy(
-                    currentTimeCalendar = now,
-                    currentState = currentState
-                )
-
-                delay(1.seconds)
-            }
+        tickerManager.start(viewModelScope) {
+            _uiState.value.schedule to _uiState.value.settings.currentLocation
         }
     }
 
     fun recalculateSchedule() {
         val settings = _uiState.value.settings
-        val loc = settings.currentLocation
         val now = Calendar.getInstance()
-        val tzOffset = now.timeZone.getOffset(now.timeInMillis) / 3600000.0
-
-        val schedule = PrayerTimeCalculator.calculateSchedule(
-            date = now,
-            latitude = loc.latitude,
-            longitude = loc.longitude,
-            timezoneOffsetHours = tzOffset,
-            method = settings.calculationMethod,
-            juristic = settings.juristicMethod,
-            highLatitudeRule = settings.highLatitudeRule,
-            minuteOffsets = settings.minuteOffsets
-        )
-
-        val currentState = PrayerTimeCalculator.calculateCurrentState(
-            currentTime = now,
-            schedule = schedule,
-            latitude = loc.latitude,
-            longitude = loc.longitude
-        )
-
-        _uiState.value = _uiState.value.copy(
-            schedule = schedule,
-            currentState = currentState
-        )
+        val schedule = recalculateScheduleUseCase(settings, now)
+        _uiState.value = _uiState.value.copy(schedule = schedule)
+        tickerManager.refreshTicker(schedule, settings.currentLocation, now)
     }
 
     fun refreshGpsLocation() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLocationLoading = true, locationErrorMessage = null)
-            val gpsLoc = locationService.getCurrentGpsLocation()
-            if (gpsLoc != null) {
-                appSettings.updateLocation(gpsLoc)
+            val result = refreshLocationUseCase()
+            if (result.isSuccess) {
                 _uiState.value = _uiState.value.copy(isLocationLoading = false)
             } else {
                 _uiState.value = _uiState.value.copy(
                     isLocationLoading = false,
-                    locationErrorMessage = "GPS unavailable. Using cached coordinates."
+                    locationErrorMessage = "GPS unavailable. Using cached coordinates.",
                 )
             }
         }
     }
 
-    fun selectPresetLocation(location: LocationInfo) {
-        appSettings.updateLocation(location)
-    }
-
-    fun updateCalculationMethod(method: CalculationMethod) {
-        appSettings.updateCalculationMethod(method)
-    }
-
-    fun updateJuristicMethod(juristic: JuristicMethod) {
-        appSettings.updateJuristicMethod(juristic)
-    }
-
-    fun updateHighLatitudeRule(rule: HighLatitudeRule) {
-        appSettings.updateHighLatitudeRule(rule)
-    }
-
-    fun updateThemeMode(mode: AppThemeMode) {
-        appSettings.updateThemeMode(mode)
-    }
-
-    fun updateHighPrioritySound(enabled: Boolean) {
-        appSettings.updateHighPrioritySound(enabled)
-    }
-
-    fun updateIs24HourFormat(is24H: Boolean) {
-        appSettings.updateIs24HourFormat(is24H)
-    }
-
-    fun updatePrayerAlertSound(prayer: PrayerType, sound: AdhanSoundType) {
-        appSettings.updatePrayerAlertSound(prayer, sound)
-    }
-
-    fun updatePrayerAlertEnabled(prayer: PrayerType, enabled: Boolean) {
-        appSettings.updatePrayerAlertEnabled(prayer, enabled)
-    }
-
-    fun updatePrayerMinuteOffset(prayer: PrayerType, offset: Int) {
-        appSettings.updatePrayerMinuteOffset(prayer, offset)
-    }
-
     fun playPreviewSound(soundType: AdhanSoundType) {
-        if (_uiState.value.isPlayingSound && _uiState.value.playingSoundType == soundType) {
-            AdhanAudioSynthesizer.stopSound()
-        } else {
-            AdhanAudioSynthesizer.playSound(
-                context = getApplication(),
-                soundType = soundType,
-                highPriorityAlarm = _uiState.value.settings.highPrioritySound,
-                volume = 1.0f
-            )
-        }
+        audioPreviewController.playPreviewSound(soundType, _uiState.value.settings.highPrioritySound)
     }
 
     fun stopPreviewSound() {
-        AdhanAudioSynthesizer.stopSound()
+        audioPreviewController.stopPreviewSound()
     }
 
-    fun canScheduleExactAlarms(): Boolean {
-        return notificationManager.canScheduleExactAlarms()
-    }
+    fun canScheduleExactAlarms(): Boolean = alarmScheduler.canScheduleExactAlarms()
 
-    fun isIgnoringBatteryOptimizations(): Boolean {
-        return notificationManager.isIgnoringBatteryOptimizations()
-    }
+    fun isIgnoringBatteryOptimizations(): Boolean = alarmScheduler.isIgnoringBatteryOptimizations()
 
     fun scheduleTestAlarm(delaySeconds: Int = 10) {
-        val nextPrayer = _uiState.value.currentState?.nextPrayer ?: PrayerType.FAJR
-        val soundType = _uiState.value.settings.prayerAlertSounds[nextPrayer] ?: AdhanSoundType.TAKBEER_ONLY
-        notificationManager.scheduleTestAlarm(
+        val nextPrayer = tickerState.value.currentState?.nextPrayer ?: PrayerType.FAJR
+        val soundType = _uiState.value.settings.prayerAlertSounds[nextPrayer] ?: AdhanSoundType.MAKKAH
+        alarmScheduler.scheduleTestAlarm(
             delaySeconds = delaySeconds,
             prayerType = nextPrayer,
-            soundType = soundType
+            soundType = soundType,
         )
     }
 
-    override fun onCleared() {
-        tickerJob?.cancel()
-        AdhanAudioSynthesizer.stopSound()
+    public override fun onCleared() {
+        super.onCleared()
+        tickerManager.stop()
+        audioPreviewController.stopPreviewSound()
     }
 }
